@@ -1,0 +1,1898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Friend Cult Combat: Street Fighter 2.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#f5c842;--red:#e63946;--blue:#457b9d;--dark:#0d0d0d;--panel:#1a1a2e;
+  --accent:#e63946;--text:#f0f0f0;--muted:#888;--green:#2ecc71;
+  --health-green:#39d353;--health-yellow:#f5c842;--health-red:#e63946;
+}
+html,body{min-height:100vh;background:#0d0d0d;color:#f0f0f0;font-family:'Rajdhani',sans-serif;overflow-x:hidden}
+#app{max-width:920px;margin:0 auto;padding:12px}
+
+/* NAV */
+.nav{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid #e63946}
+.nav-btn{background:none;border:none;color:#888;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;
+  padding:8px 16px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s}
+.nav-btn.active,.nav-btn:hover{color:#f5c842;background:#1a1a2e}
+.nav-btn.active{border-bottom:2px solid #f5c842;margin-bottom:-2px}
+
+/* SCREENS */
+.screen{display:none}.screen.active{display:block}
+
+/* ROSTER */
+.roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.fighter-card{background:#1a1a2e;border:2px solid #333;border-radius:8px;padding:12px;text-align:center;
+  cursor:pointer;transition:all .2s;position:relative}
+.fighter-card:hover{border-color:#f5c842;transform:translateY(-2px)}
+.fighter-avatar{width:80px;height:80px;border-radius:50%;margin:0 auto 8px;border:3px solid #444;
+  display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden;background:#2a2a4e}
+.fighter-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.fighter-name{font-family:'Black Ops One',cursive;font-size:13px;color:#f5c842;margin-bottom:4px}
+.fighter-style{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px}
+.fighter-stars{color:#f5c842;font-size:12px}
+.add-card{border:2px dashed #444;background:none;cursor:pointer}
+.add-card:hover{border-color:#f5c842}
+.add-icon{font-size:36px;color:#444;margin-bottom:8px}
+.add-card:hover .add-icon{color:#f5c842}
+
+/* CREATOR */
+.creator-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.creator-panel{background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:16px}
+.creator-panel h3{font-family:'Black Ops One',cursive;color:#f5c842;font-size:14px;margin-bottom:12px;letter-spacing:1px}
+.upload-zone{border:2px dashed #444;border-radius:8px;padding:20px;text-align:center;cursor:pointer;
+  transition:all .2s;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.upload-zone:hover{border-color:#f5c842;background:#1f1f3a}
+.upload-zone input{display:none}
+.upload-preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.preview-img{width:60px;height:60px;border-radius:6px;object-fit:cover;border:2px solid #444}
+label{font-size:13px;color:#888;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+input[type=text],textarea,select{width:100%;background:#0d0d0d;border:1px solid #444;border-radius:6px;
+  color:#f0f0f0;font-family:'Rajdhani',sans-serif;font-size:14px;padding:8px 10px;margin-bottom:10px}
+textarea{resize:vertical;min-height:70px}
+input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5c842}
+.stat-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.stat-label{width:80px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.5px}
+.stat-track{flex:1;height:6px;background:#333;border-radius:3px;overflow:hidden}
+.stat-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.stat-val{width:24px;font-size:12px;font-weight:700;text-align:right}
+
+.btn{padding:10px 20px;border:none;border-radius:6px;font-family:'Rajdhani',sans-serif;font-weight:700;
+  font-size:14px;letter-spacing:1px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.btn-primary{background:#e63946;color:#fff}
+.btn-primary:hover{background:#c0303b}
+.btn-gold{background:#f5c842;color:#0d0d0d}
+.btn-gold:hover{background:#d4a932}
+.btn-outline{background:none;border:1px solid #444;color:#f0f0f0}
+.btn-outline:hover{border-color:#f5c842;color:#f5c842}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-danger{background:#933;color:#fff}
+.btn-danger:hover{background:#c00}
+
+.generated-card{background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:12px;margin-top:10px}
+.big-avatar{width:100px;height:100px;border-radius:50%;margin:0 auto 10px;border:4px solid #f5c842;
+  display:flex;align-items:center;justify-content:center;font-size:48px;background:#2a2a4e;overflow:hidden}
+.big-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.move-tag{display:inline-block;background:#1a1a2e;border:1px solid #e63946;border-radius:4px;
+  padding:3px 8px;font-size:11px;color:#e63946;margin:2px;letter-spacing:.5px}
+
+/* FIGHT SCREEN */
+.fight-arena{background:#1a1a2e;border-radius:12px;padding:16px}
+.hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:12px}
+.health-bar-wrap.p2{direction:rtl}
+.health-label{font-family:'Black Ops One',cursive;font-size:13px;color:#f5c842;margin-bottom:4px}
+.health-track{height:18px;background:#333;border-radius:4px;overflow:hidden;border:1px solid #444}
+.health-fill{height:100%;border-radius:4px;transition:width .3s ease}
+.round-display{text-align:center;font-family:'Black Ops One',cursive}
+.round-display .round{font-size:12px;color:#888;letter-spacing:2px}
+.round-display .timer{font-size:28px;color:#f5c842;line-height:1}
+
+.fight-stage{height:240px;background:linear-gradient(180deg,#1a0a2e 60%,#2d1b4e 60%,#3d2560 100%);
+  border-radius:8px;position:relative;overflow:hidden;margin-bottom:12px;border:1px solid #333}
+.stage-floor{position:absolute;bottom:0;left:0;right:0;height:40px;
+  background:linear-gradient(0deg,#1a0a0a,#2d1010);border-top:2px solid #f5c842}
+.stage-crowd{position:absolute;top:0;left:0;right:0;height:60px;
+  background:repeating-linear-gradient(90deg,#1a0a2e 0,#1a0a2e 20px,#1f0f38 20px,#1f0f38 40px)}
+.fighter-sprite{position:absolute;bottom:40px;transition:left .1s,opacity .2s;
+  display:flex;flex-direction:column;align-items:center}
+.sprite-body{width:72px;height:120px;position:relative;overflow:visible}
+.sprite-name{font-size:10px;color:#f5c842;font-weight:700;letter-spacing:1px;text-align:center;
+  margin-top:2px;text-transform:uppercase}
+.fighter-svg{width:70px;height:120px}
+.attack-flash{position:absolute;top:0;left:0;right:0;bottom:0;border-radius:8px;
+  pointer-events:none;opacity:0;transition:opacity .1s}
+.controls-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.controls-panel{background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:10px}
+.controls-panel h4{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.move-btns{display:flex;gap:6px;flex-wrap:wrap}
+.move-btn{background:#1a1a2e;border:1px solid #444;border-radius:6px;color:#f0f0f0;
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:11px;padding:5px 8px;cursor:pointer;
+  transition:all .15s;letter-spacing:.5px}
+.move-btn:hover{background:#e63946;border-color:#e63946}
+.move-btn:active{transform:scale(.95)}
+.move-btn.special{border-color:#f5c842;color:#f5c842}
+.move-btn.special:hover{background:#f5c842;color:#0d0d0d}
+.move-btn.super-btn{border-color:#e63946;color:#e63946;font-size:11px}
+.move-btn.super-btn:hover{background:#e63946;color:#fff}
+
+.battle-log{background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:10px;height:80px;
+  overflow-y:auto;font-size:12px;line-height:1.6}
+.log-hit{color:#e63946}.log-block{color:#457b9d}.log-special{color:#f5c842}.log-ko{color:#f5c842;font-weight:700}
+.log-miss{color:#555}
+
+.select-fighters{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:16px}
+.vs-text{font-family:'Black Ops One',cursive;font-size:28px;color:#e63946;text-align:center}
+.fighter-select-box{background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:10px}
+.fighter-select-box h4{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.fighter-options{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto}
+.fighter-option{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid #333;
+  border-radius:6px;cursor:pointer;transition:all .15s}
+.fighter-option:hover,.fighter-option.selected{border-color:#f5c842;background:#2a2a4e}
+.fighter-option-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:18px;background:#2a2a4e;border:2px solid #444;overflow:hidden;flex-shrink:0}
+.fighter-option-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.fighter-option-name{font-size:13px;font-weight:700;color:#f0f0f0}
+.fighter-option-style{font-size:11px;color:#888}
+.ko-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Black Ops One',cursive;font-size:52px;color:#f5c842;
+  text-shadow:4px 4px 0 #e63946,-2px -2px 0 #e63946;display:none;white-space:nowrap;z-index:10;
+  animation:koFlash .3s ease infinite alternate}
+@keyframes koFlash{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.05)}}
+.power-meter{height:8px;background:#333;border-radius:4px;overflow:hidden;margin-top:4px}
+.power-fill{height:100%;background:linear-gradient(90deg,#457b9d,#f5c842);border-radius:4px;transition:width .3s}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.tag-red{background:#e6394620;border:1px solid #e63946;color:#e63946}
+
+/* TITLE */
+.title-bar{text-align:center;margin-bottom:16px}
+.game-title{font-family:'Black Ops One',cursive;font-size:26px;letter-spacing:2px;
+  background:linear-gradient(180deg,#f5c842,#e63946);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;line-height:1.2}
+.game-sub{font-size:10px;color:#888;letter-spacing:4px;text-transform:uppercase;margin-top:2px}
+
+.empty-state{text-align:center;padding:40px;color:#888}
+.empty-state h3{font-family:'Black Ops One',cursive;color:#444;font-size:18px;margin-bottom:8px}
+.loading-dots::after{content:'.';animation:dots 1.2s steps(4,end) infinite}
+@keyframes dots{0%,20%{content:'.'}40%{content:'..'}80%,100%{content:'...'}}
+.spinner{width:40px;height:40px;border:3px solid #333;border-top-color:#f5c842;
+  border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-msg{background:#1a0a0a;border:1px solid #e63946;border-radius:6px;padding:10px;font-size:12px;color:#e63946;margin-top:8px}
+.edit-delete-row{display:flex;gap:6px;margin-top:8px}
+.generating-state{text-align:center;padding:20px}
+
+/* GAMEPAD UI */
+.gamepad-status{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.gamepad-badge{padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.gamepad-connected{background:#39d35320;border:1px solid #39d353;color:#39d353}
+.gamepad-disconnected{background:#e6394620;border:1px solid #e63946;color:#e63946}
+.key-hint{display:inline-block;background:#1a1a2e;border:1px solid #444;border-radius:3px;
+  padding:1px 6px;font-size:10px;font-family:monospace;color:#888;margin:1px}
+
+.ctrl-legend{background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:10px;margin-bottom:10px}
+.ctrl-legend h4{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px}
+.ctrl-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0}
+.ctrl-action{color:#888}
+.ctrl-keys{display:flex;gap:3px;align-items:center}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#1a1a2e}
+::-webkit-scrollbar-thumb{background:#444;border-radius:2px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="title-bar">
+    <div class="game-title">FRIEND CULT COMBAT</div>
+    <div class="game-sub">Street Fighter 2.0 &nbsp;·&nbsp; Create · Battle · Dominate</div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="showScreen('roster',this)">Roster</button>
+    <button class="nav-btn" onclick="showScreen('creator',this)">+ Add Fighter</button>
+    <button class="nav-btn" onclick="showScreen('fight',this)">⚔️ Fight!</button>
+  </div>
+
+  <!-- ROSTER -->
+  <div id="screen-roster" class="screen active">
+    <div id="roster-grid" class="roster-grid"></div>
+  </div>
+
+  <!-- CREATOR -->
+  <div id="screen-creator" class="screen">
+    <div class="creator-grid">
+      <div>
+        <div class="creator-panel" style="margin-bottom:12px">
+          <h3>Fighter Identity</h3>
+          <label>Fighter Name</label>
+          <input type="text" id="c-name" placeholder="e.g. Iron Mike">
+          <label>Real Name (optional)</label>
+          <input type="text" id="c-realname" placeholder="Your friend's name">
+          <label>Fighting Style</label>
+          <select id="c-style">
+            <option value="Street Brawler">Street Brawler</option>
+            <option value="Muay Thai">Muay Thai</option>
+            <option value="Capoeira">Capoeira</option>
+            <option value="Kung Fu">Kung Fu</option>
+            <option value="Judo">Judo</option>
+            <option value="Ninjutsu">Ninjutsu</option>
+            <option value="Wrestling">Wrestling</option>
+            <option value="Drunken Fist">Drunken Fist</option>
+            <option value="Dark Arts">Dark Arts</option>
+            <option value="Breakdance Fighter">Breakdance Fighter</option>
+            <option value="Samurai">Samurai</option>
+            <option value="Boxer">Boxer</option>
+          </select>
+          <label>Upload Photos (1-3 of your friend)</label>
+          <div class="upload-zone" onclick="document.getElementById('c-upload').click()">
+            <input type="file" id="c-upload" accept="image/*" multiple onchange="handleUpload(event)">
+            <div style="font-size:24px;color:#444;margin-bottom:6px">📷</div>
+            <div style="font-size:13px;color:#666">Click to upload photos</div>
+            <div style="font-size:11px;color:#444;margin-top:4px">Influences character appearance</div>
+          </div>
+          <div id="upload-preview" class="upload-preview"></div>
+        </div>
+        <div class="creator-panel">
+          <h3>Personality & Description</h3>
+          <label>Describe their personality</label>
+          <textarea id="c-personality" placeholder="e.g. Always cracking jokes, wildly competitive, never backs down from a challenge..."></textarea>
+          <label>Appearance / Special Traits</label>
+          <textarea id="c-appearance" placeholder="e.g. Has a beard, wears glasses, super tall, always wears red sneakers..."></textarea>
+          <label>Signature Catchphrase (optional)</label>
+          <input type="text" id="c-catchphrase" placeholder="e.g. 'You just got WRECKED!'">
+          <button class="btn btn-primary" style="width:100%" onclick="generateFighter()">⚡ Generate Fighter with AI</button>
+        </div>
+      </div>
+      <div>
+        <div class="creator-panel">
+          <h3>Generated Fighter</h3>
+          <div id="generated-output">
+            <div class="empty-state" style="padding:30px">
+              <div style="font-size:40px;margin-bottom:8px">🥊</div>
+              <h3>Ready to Create</h3>
+              <p style="font-size:13px">Fill in the details and hit Generate</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIGHT -->
+  <div id="screen-fight" class="screen">
+    <div id="fight-setup">
+      <!-- Gamepad status -->
+      <div class="gamepad-status" id="gamepad-status">
+        <span style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px">Controllers:</span>
+        <span class="gamepad-badge gamepad-disconnected" id="gp0-badge">P1: No Controller</span>
+        <span class="gamepad-badge gamepad-disconnected" id="gp1-badge">P2: No Controller</span>
+        <span style="font-size:11px;color:#555">— or use keyboard below</span>
+      </div>
+
+      <!-- Control legend -->
+      <div class="ctrl-legend">
+        <h4>Controls Reference</h4>
+        <div class="ctrl-grid">
+          <div>
+            <div style="font-size:11px;color:#f5c842;margin-bottom:4px">⌨ Player 1 (Keyboard)</div>
+            <div class="ctrl-row"><span class="ctrl-action">Move</span><span class="ctrl-keys"><span class="key-hint">A</span><span class="key-hint">D</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Light</span><span class="ctrl-keys"><span class="key-hint">U</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Heavy</span><span class="ctrl-keys"><span class="key-hint">I</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Special 1</span><span class="ctrl-keys"><span class="key-hint">O</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Special 2</span><span class="ctrl-keys"><span class="key-hint">P</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Super</span><span class="ctrl-keys"><span class="key-hint">Y</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Block</span><span class="ctrl-keys"><span class="key-hint">T</span></span></div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#e63946;margin-bottom:4px">⌨ Player 2 (Keyboard)</div>
+            <div class="ctrl-row"><span class="ctrl-action">Move</span><span class="ctrl-keys"><span class="key-hint">←</span><span class="key-hint">→</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Light</span><span class="ctrl-keys"><span class="key-hint">Num1</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Heavy</span><span class="ctrl-keys"><span class="key-hint">Num2</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Special 1</span><span class="ctrl-keys"><span class="key-hint">Num4</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Special 2</span><span class="ctrl-keys"><span class="key-hint">Num5</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Super</span><span class="ctrl-keys"><span class="key-hint">Num7</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Block</span><span class="ctrl-keys"><span class="key-hint">Num0</span></span></div>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:#555">🎮 USB Gamepad: A=Light · B=Heavy · X=Special1 · Y=Special2 · LB=Block · RB=Super · D-Pad=Move</div>
+      </div>
+
+      <div class="select-fighters">
+        <div class="fighter-select-box">
+          <h4>Player 1</h4>
+          <div id="p1-options" class="fighter-options"></div>
+        </div>
+        <div class="vs-text">VS</div>
+        <div class="fighter-select-box">
+          <h4>Player 2 / CPU</h4>
+          <div id="p2-options" class="fighter-options"></div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-bottom:12px">
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="cpu-toggle" checked> CPU controls Player 2
+        </label>
+      </div>
+      <div style="text-align:center">
+        <button class="btn btn-gold" style="font-size:16px;padding:12px 32px" onclick="startFight()">⚔️ START FIGHT</button>
+      </div>
+    </div>
+
+    <div id="fight-arena" style="display:none">
+      <div class="fight-arena">
+        <div class="hud">
+          <div class="health-bar-wrap">
+            <div class="health-label" id="p1-hud-name">P1</div>
+            <div class="health-track"><div class="health-fill" id="p1-health-bar" style="width:100%;background:#39d353"></div></div>
+            <div class="power-meter"><div class="power-fill" id="p1-power-bar" style="width:0%"></div></div>
+          </div>
+          <div class="round-display">
+            <div class="round">ROUND</div>
+            <div class="timer" id="fight-timer">60</div>
+            <div class="round" id="round-num">1</div>
+          </div>
+          <div class="health-bar-wrap p2">
+            <div class="health-label" id="p2-hud-name">P2</div>
+            <div class="health-track"><div class="health-fill" id="p2-health-bar" style="width:100%;background:#39d353"></div></div>
+            <div class="power-meter"><div class="power-fill" id="p2-power-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <div class="fight-stage" id="fight-stage">
+          <div class="stage-crowd"></div>
+          <div class="fighter-sprite" id="sprite-p1" style="left:80px">
+            <div class="sprite-body" id="body-p1"></div>
+            <div class="sprite-name" id="name-p1"></div>
+          </div>
+          <div class="fighter-sprite" id="sprite-p2" style="left:580px">
+            <div class="sprite-body" id="body-p2"></div>
+            <div class="sprite-name" id="name-p2"></div>
+          </div>
+          <div class="stage-floor"></div>
+          <div class="ko-overlay" id="ko-overlay">K.O.!</div>
+          <div class="attack-flash" id="attack-flash"></div>
+        </div>
+
+        <div class="controls-row">
+          <div class="controls-panel">
+            <h4 id="p1-ctrl-name">Player 1</h4>
+            <div class="move-btns" id="p1-moves"></div>
+          </div>
+          <div class="controls-panel">
+            <h4 id="p2-ctrl-name">Player 2</h4>
+            <div class="move-btns" id="p2-moves"></div>
+          </div>
+        </div>
+
+        <div class="battle-log" id="battle-log"></div>
+        <div style="text-align:center;margin-top:10px">
+          <button class="btn btn-outline btn-sm" onclick="endFight()">End Fight</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="fight-result" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ===== STATE =====
+let fighters = [];
+try{ fighters = JSON.parse(localStorage.getItem('fcc_fighters')||'[]'); }catch(e){}
+let selectedP1=0, selectedP2=1;
+let fightState=null, fightTimer=null;
+let uploadedImages=[], editingIdx=-1;
+
+// ===== GAMEPAD =====
+const gpState = {
+  0: { buttons: Array(17).fill(false), axes:[0,0,0,0], prevButtons: Array(17).fill(false) },
+  1: { buttons: Array(17).fill(false), axes:[0,0,0,0], prevButtons: Array(17).fill(false) }
+};
+// Standard gamepad button map
+const GP_A=0,GP_B=1,GP_X=2,GP_Y=3,GP_LB=4,GP_RB=5,GP_DPAD_L=14,GP_DPAD_R=15;
+const MOVE_COOLDOWN=350;
+let lastMoveTime={p1:0,p2:0};
+
+function updateGamepadStatus(){
+  const pads=navigator.getGamepads?navigator.getGamepads():[];
+  [0,1].forEach(i=>{
+    const pad=pads[i];
+    const badge=document.getElementById(`gp${i}-badge`);
+    if(!badge) return;
+    if(pad&&pad.connected){
+      badge.textContent=`P${i+1}: ${pad.id.substring(0,20)}`;
+      badge.className='gamepad-badge gamepad-connected';
+    } else {
+      badge.textContent=`P${i+1}: No Controller`;
+      badge.className='gamepad-badge gamepad-disconnected';
+    }
+  });
+}
+
+window.addEventListener('gamepadconnected', e=>{
+  console.log('Gamepad connected:', e.gamepad.id);
+  updateGamepadStatus();
+});
+window.addEventListener('gamepaddisconnected', e=>{
+  updateGamepadStatus();
+});
+
+function pollGamepads(){
+  if(!fightState||!fightState.active){ requestAnimationFrame(pollGamepads); return; }
+  const pads=navigator.getGamepads?navigator.getGamepads():[];
+  const now=Date.now();
+
+  // Gamepad 0 -> P1
+  const pad0=pads[0];
+  if(pad0&&pad0.connected){
+    const prev=gpState[0].prevButtons;
+    const cur=pad0.buttons.map(b=>b.pressed);
+    // Movement
+    const ax=pad0.axes[0]||0;
+    const dL=cur[GP_DPAD_L]||ax<-0.5;
+    const dR=cur[GP_DPAD_R]||ax>0.5;
+    if((dR||dL)&&now-lastMoveTime.p1>100){
+      moveSprite('p1',dR?1:-1); lastMoveTime.p1=now;
+    }
+    // Attacks — trigger on button press (not hold)
+    if(cur[GP_A]&&!prev[GP_A]) doMove('p1','light');
+    if(cur[GP_B]&&!prev[GP_B]) doMove('p1','heavy');
+    if(cur[GP_X]&&!prev[GP_X]) doMove('p1','special1');
+    if(cur[GP_Y]&&!prev[GP_Y]) doMove('p1','special2');
+    if(cur[GP_RB]&&!prev[GP_RB]) doMove('p1','super');
+    if(cur[GP_LB]&&!prev[GP_LB]) doMove('p1','block');
+    gpState[0].prevButtons=[...cur];
+  }
+
+  // Gamepad 1 -> P2 (only if not CPU)
+  const pad1=pads[1];
+  if(pad1&&pad1.connected&&!fightState.isCPU){
+    const prev=gpState[1].prevButtons;
+    const cur=pad1.buttons.map(b=>b.pressed);
+    const ax=pad1.axes[0]||0;
+    const dL=cur[GP_DPAD_L]||ax<-0.5;
+    const dR=cur[GP_DPAD_R]||ax>0.5;
+    if((dR||dL)&&now-lastMoveTime.p2>100){
+      moveSprite('p2',dR?1:-1); lastMoveTime.p2=now;
+    }
+    if(cur[GP_A]&&!prev[GP_A]) doMove('p2','light');
+    if(cur[GP_B]&&!prev[GP_B]) doMove('p2','heavy');
+    if(cur[GP_X]&&!prev[GP_X]) doMove('p2','special1');
+    if(cur[GP_Y]&&!prev[GP_Y]) doMove('p2','special2');
+    if(cur[GP_RB]&&!prev[GP_RB]) doMove('p2','super');
+    if(cur[GP_LB]&&!prev[GP_LB]) doMove('p2','block');
+    gpState[1].prevButtons=[...cur];
+  }
+
+  requestAnimationFrame(pollGamepads);
+}
+requestAnimationFrame(pollGamepads);
+
+// ===== KEYBOARD =====
+const keyMap = {
+  // P1
+  'KeyA': ()=>fightState&&moveSprite('p1',-1),
+  'KeyD': ()=>fightState&&moveSprite('p1',1),
+  'KeyU': ()=>doMove('p1','light'),
+  'KeyI': ()=>doMove('p1','heavy'),
+  'KeyO': ()=>doMove('p1','special1'),
+  'KeyP': ()=>doMove('p1','special2'),
+  'KeyY': ()=>doMove('p1','super'),
+  'KeyT': ()=>doMove('p1','block'),
+  // P2
+  'ArrowLeft': ()=>fightState&&moveSprite('p2',-1),
+  'ArrowRight': ()=>fightState&&moveSprite('p2',1),
+  'Numpad1': ()=>doMove('p2','light'),
+  'Numpad2': ()=>doMove('p2','heavy'),
+  'Numpad4': ()=>doMove('p2','special1'),
+  'Numpad5': ()=>doMove('p2','special2'),
+  'Numpad7': ()=>doMove('p2','super'),
+  'Numpad0': ()=>doMove('p2','block'),
+};
+const keyHeld={};
+document.addEventListener('keydown',e=>{
+  const tag=document.activeElement&&document.activeElement.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
+  if(keyHeld[e.code]) return;
+  keyHeld[e.code]=true;
+  const fn=keyMap[e.code];
+  if(fn){ e.preventDefault(); fn(); }
+});
+document.addEventListener('keyup',e=>{ keyHeld[e.code]=false; });
+
+function moveSprite(player, dir){
+  if(!fightState||!fightState.active) return;
+  const sprite=document.getElementById(`sprite-${player}`);
+  const cur=parseInt(sprite.style.left)||0;
+  const stage=document.getElementById('fight-stage');
+  const maxX=stage.offsetWidth-80;
+  const newX=Math.max(0,Math.min(maxX,cur+dir*18));
+  sprite.style.left=newX+'px';
+  if(player==='p1') fightState.p1Pos=newX;
+  else fightState.p2Pos=newX;
+}
+
+// ===== SCREEN NAV =====
+function showScreen(id,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id==='roster') renderRoster();
+  if(id==='fight'){ renderFightSetup(); updateGamepadStatus(); }
+  if(id==='creator'&&editingIdx===-1) resetCreator();
+}
+
+// ===== ROSTER =====
+function renderRoster(){
+  const grid=document.getElementById('roster-grid');
+  grid.innerHTML='';
+  fighters.forEach((f,i)=>{
+    const card=document.createElement('div');
+    card.className='fighter-card';
+    const stars=Math.min(5,Math.round(((f.stats?.power||5)+(f.stats?.speed||5)+(f.stats?.defense||5))/9));
+    card.innerHTML=`
+      <div class="fighter-avatar" id="roster-avatar-${i}" style="background:#0d0d1a;overflow:hidden;padding:0"></div>
+      <div class="fighter-name">${f.name}</div>
+      <div class="fighter-style">${f.style}</div>
+      <div class="fighter-stars">${'★'.repeat(stars)}${'☆'.repeat(5-stars)}</div>
+      <div style="margin-top:6px"><span class="tag tag-red">${f.archetype||'Fighter'}</span></div>
+      <div class="edit-delete-row">
+        <button class="btn btn-outline btn-sm" style="flex:1" onclick="editFighter(${i},event)">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteFighter(${i},event)">✕</button>
+      </div>`;
+    grid.appendChild(card);
+    // Draw mini pixel sprite into avatar
+    requestAnimationFrame(()=>{
+      const wrap=document.getElementById(`roster-avatar-${i}`);
+      if(!wrap) return;
+      const c=document.createElement('canvas');
+      c.style.imageRendering='pixelated';
+      c.style.imageRendering='crisp-edges';
+      c.style.width='100%'; c.style.height='100%';
+      wrap.appendChild(c);
+      // Mini sprite: scale 2
+      const miniScale=2;
+      c.width=SW*miniScale; c.height=SH*miniScale;
+      const ctx=c.getContext('2d');
+      ctx.imageSmoothingEnabled=false;
+      const palette=buildPalette(Object.assign({sigColor:f.color||'#e63946'},f.spriteData||{}));
+      const grid2=buildSpriteGrid(f.spriteData||{},false);
+      for(let row=0;row<SH;row++) for(let col=0;col<SW;col++){
+        const key=grid2[row]?grid2[row][col]:'T';
+        if(!key||key==='T') continue;
+        const color=palette[key]||palette['SK'];
+        if(!color||color.includes('0000')) continue;
+        ctx.fillStyle=color;
+        ctx.fillRect(col*miniScale,row*miniScale,miniScale,miniScale);
+      }
+    });
+    grid.appendChild(card);
+  });
+  const add=document.createElement('div');
+  add.className='fighter-card add-card';
+  add.innerHTML=`<div class="add-icon">+</div><div style="font-size:13px;color:#666">Add Fighter</div>`;
+  add.onclick=()=>{ editingIdx=-1; document.querySelectorAll('.nav-btn')[1].click(); };
+  grid.appendChild(add);
+}
+
+function deleteFighter(i,e){
+  e.stopPropagation();
+  if(!confirm('Remove this fighter?')) return;
+  fighters.splice(i,1); saveFighters(); renderRoster();
+}
+function editFighter(i,e){
+  e.stopPropagation();
+  editingIdx=i;
+  const f=fighters[i];
+  document.getElementById('c-name').value=f.name||'';
+  document.getElementById('c-realname').value=f.realname||'';
+  document.getElementById('c-style').value=f.style||'Street Brawler';
+  document.getElementById('c-personality').value=f.personality||'';
+  document.getElementById('c-appearance').value=f.appearance||'';
+  document.getElementById('c-catchphrase').value=f.catchphrase||'';
+  if(f.photo){ uploadedImages=[f.photo]; renderUploadPreviews(); }
+  window._pendingFighter=f;
+  document.querySelectorAll('.nav-btn')[1].click();
+  renderGeneratedFighter(f);
+}
+
+// ===== CREATOR =====
+function resetCreator(){
+  document.getElementById('c-name').value='';
+  document.getElementById('c-realname').value='';
+  document.getElementById('c-personality').value='';
+  document.getElementById('c-appearance').value='';
+  document.getElementById('c-catchphrase').value='';
+  uploadedImages=[]; document.getElementById('upload-preview').innerHTML='';
+  document.getElementById('generated-output').innerHTML=`<div class="empty-state" style="padding:30px"><div style="font-size:40px;margin-bottom:8px">🥊</div><h3>Ready to Create</h3><p style="font-size:13px">Fill in the details and hit Generate</p></div>`;
+}
+function handleUpload(e){
+  const files=Array.from(e.target.files).slice(0,3);
+  uploadedImages=[];
+  Promise.all(files.map(f=>new Promise(res=>{
+    const r=new FileReader();
+    r.onload=ev=>{ uploadedImages.push(ev.target.result); res(); };
+    r.readAsDataURL(f);
+  }))).then(renderUploadPreviews);
+}
+function renderUploadPreviews(){
+  document.getElementById('upload-preview').innerHTML=uploadedImages.map(img=>`<img class="preview-img" src="${img}">`).join('');
+}
+
+async function generateFighter(){
+  const name=document.getElementById('c-name').value.trim();
+  const realname=document.getElementById('c-realname').value.trim();
+  const style=document.getElementById('c-style').value;
+  const personality=document.getElementById('c-personality').value.trim();
+  const appearance=document.getElementById('c-appearance').value.trim();
+  const catchphrase=document.getElementById('c-catchphrase').value.trim();
+  if(!name){ alert('Give your fighter a name!'); return; }
+  if(!personality&&!appearance){ alert('Add some personality or appearance details!'); return; }
+
+  const out = document.getElementById('generated-output');
+  out.innerHTML=`<div class="generating-state"><div class="spinner"></div><p style="color:#888;font-size:13px">Step 1/2 — Analyzing appearance<span class="loading-dots"></span></p></div>`;
+
+  const userPrompt=`Create a fighter profile for a character based on this person:
+Name: ${name}${realname?` (based on: ${realname})`:''}
+Fighting Style: ${style}
+Personality: ${personality||'Not specified'}
+Appearance/Traits: ${appearance||'Not specified'}
+Catchphrase: ${catchphrase||'None'}
+${uploadedImages.length>0?'Reference photo provided.':''}
+
+Return ONLY a valid JSON object, no markdown, no backticks:
+{
+  "name": "fighter name",
+  "title": "2-4 word cool title",
+  "archetype": "one of: Rushdown, Grappler, Zoner, Tricky, Tank, Speedster",
+  "backstory": "2 dramatic sentences incorporating personality",
+  "emoji": "single emoji representing this fighter",
+  "color": "hex color as their signature color e.g. #e63946",
+  "stats": { "power": 1-10, "speed": 1-10, "defense": 1-10, "special": 1-10, "stamina": 1-10 },
+  "moves": {
+    "light": "2-3 word light attack name",
+    "heavy": "2-3 word heavy attack name",
+    "special1": "2-3 word special move name",
+    "special2": "2-3 word special move name",
+    "super": "2-4 word dramatic super move name"
+  },
+  "taunts": ["trash talk line 1", "trash talk line 2", "trash talk line 3"],
+  "winQuote": "short victory quote",
+  "appearance": "2 sentences describing in-game fighter look blending real traits into stylized form"
+}`;
+
+  try{
+    // Step 1: Extract sprite appearance data from photo (if provided)
+    let spriteData = {};
+    if(uploadedImages.length>0){
+      spriteData = await extractSpriteData(uploadedImages[0], appearance, personality);
+    } else {
+      // Infer from text description
+      spriteData = inferSpriteDataFromText(appearance, personality);
+    }
+
+    out.innerHTML=`<div class="generating-state"><div class="spinner"></div><p style="color:#888;font-size:13px">Step 2/2 — Forging fighter profile<span class="loading-dots"></span></p></div>`;
+
+    const msgContent=uploadedImages.length>0
+      ?[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:uploadedImages[0].split(',')[1]}},{type:'text',text:userPrompt}]
+      :userPrompt;
+
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:1000,
+        system:'You are a fighting game character designer. Respond ONLY with valid JSON, no markdown, no backticks.',
+        messages:[{role:'user',content:msgContent}]
+      })
+    });
+    const data=await resp.json();
+    if(!resp.ok || data.type==='error'){
+      const msg=data?.error?.message||JSON.stringify(data);
+      throw new Error(`API error (${resp.status}): ${msg}`);
+    }
+    if(!data.content||!data.content[0]){
+      throw new Error(`Unexpected response: ${JSON.stringify(data).substring(0,200)}`);
+    }
+    let text=data.content[0].text.trim().replace(/```json|```/g,'').trim();
+    const jsonStart=text.indexOf('{'), jsonEnd=text.lastIndexOf('}');
+    if(jsonStart>-1&&jsonEnd>-1) text=text.slice(jsonStart,jsonEnd+1);
+    const f=JSON.parse(text);
+    f.style=style; f.personality=personality; f.appearance=appearance;
+    f.catchphrase=catchphrase; f.realname=realname;
+    f.photo=uploadedImages[0]||null;
+    f.spriteData=spriteData;
+    f.id=Date.now(); f.hp=100;
+    renderGeneratedFighter(f);
+    window._pendingFighter=f;
+  }catch(err){
+    out.innerHTML=`<div class="error-msg">⚠️ Generation failed.<br><small>${err.message}</small></div>`;
+  }
+}
+
+// Fallback: guess sprite colors from text description
+function inferSpriteDataFromText(appearance, personality){
+  const text=(appearance+' '+personality).toLowerCase();
+  const sd={};
+  if(/dark skin|brown skin|black/.test(text)) sd.skinTone='#8a5a3a';
+  else if(/light skin|pale|fair/.test(text)) sd.skinTone='#f5d5b8';
+  else if(/asian|tan/.test(text)) sd.skinTone='#c8a070';
+  else sd.skinTone='#c8a882';
+
+  if(/blonde|blond/.test(text)) sd.hairColor='#e8c840';
+  else if(/red hair|redhead/.test(text)) sd.hairColor='#c83010';
+  else if(/gray hair|grey hair|white hair/.test(text)) sd.hairColor='#aaaaaa';
+  else if(/bald/.test(text)){ sd.hairColor=sd.skinTone||'#c8a882'; sd.hairLength='short'; }
+  else sd.hairColor='#2a1a0a';
+
+  sd.hairLength=/long hair/.test(text)?'long':'short';
+  sd.beard=/beard|goatee|mustache/.test(text);
+  sd.glasses=/glasses|spectacles/.test(text);
+  sd.build=/big|heavy|large|stocky|chubby/.test(text)?'heavy':(/slim|thin|skinny/.test(text)?'slim':'medium');
+
+  if(/red shirt|red top/.test(text)) sd.shirtColor='#e63946';
+  else if(/blue shirt|blue top/.test(text)) sd.shirtColor='#457b9d';
+  else if(/black shirt/.test(text)) sd.shirtColor='#222222';
+  else if(/white shirt/.test(text)) sd.shirtColor='#eeeeee';
+  else if(/green shirt/.test(text)) sd.shirtColor='#2d8a4e';
+  else sd.shirtColor='#e63946';
+
+  sd.pantsColor=/jeans|blue pants/.test(text)?'#3a5a8a':(/black pants/.test(text)?'#2a2a2a':'#3a3a5a');
+  sd.shoeColor=/white shoes|white sneakers/.test(text)?'#dddddd':(/red shoes/.test(text)?'#cc2222':'#111111');
+  return sd;
+}
+
+function renderGeneratedFighter(f){
+  const sc=v=>v>=8?'#39d353':v>=5?'#f5c842':'#e63946';
+  const sb=(lbl,val)=>`<div class="stat-bar"><div class="stat-label">${lbl}</div><div class="stat-track"><div class="stat-fill" style="width:${val*10}%;background:${sc(val)}"></div></div><div class="stat-val" style="color:${sc(val)}">${val}</div></div>`;
+  document.getElementById('generated-output').innerHTML=`
+    <div class="generated-card">
+      <div id="preview-sprite-wrap" style="text-align:center;margin-bottom:10px;background:#0d0d1a;border-radius:8px;padding:12px;border:1px solid #333">
+        <canvas id="preview-sprite" style="image-rendering:pixelated;image-rendering:crisp-edges;display:block;margin:0 auto"></canvas>
+        <div style="font-size:10px;color:#444;margin-top:6px;letter-spacing:1px">SNES PIXEL SPRITE</div>
+      </div>
+      <div style="text-align:center;margin-bottom:10px">
+        <div style="font-family:'Black Ops One',cursive;font-size:18px;color:#f5c842">${f.name}</div>
+        <div style="font-size:11px;color:#e63946;text-transform:uppercase;letter-spacing:1px">${f.title||''}</div>
+        <div style="font-size:11px;color:#888;margin-top:3px">${f.style} · <span class="tag tag-red">${f.archetype||'Fighter'}</span></div>
+      </div>
+      <div style="font-size:12px;color:#aaa;margin-bottom:10px;font-style:italic;text-align:center">"${f.backstory||''}"</div>
+      ${sb('Power',f.stats?.power||5)}${sb('Speed',f.stats?.speed||5)}${sb('Defense',f.stats?.defense||5)}${sb('Special',f.stats?.special||5)}${sb('Stamina',f.stats?.stamina||5)}
+      <div style="margin-top:8px;margin-bottom:4px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px">Moves</div>
+      <div>${f.moves?Object.values(f.moves).map(v=>`<span class="move-tag">${v}</span>`).join(''):''}</div>
+      ${f.catchphrase?`<div style="margin-top:8px;font-size:12px;color:#f5c842;text-align:center">"${f.catchphrase}"</div>`:''}
+      <div style="display:flex;gap:6px;margin-top:12px">
+        <button class="btn btn-gold" style="flex:1" onclick="saveFighterToRoster()">Save to Roster</button>
+        <button class="btn btn-outline btn-sm" onclick="generateFighter()">Regen</button>
+      </div>
+    </div>`;
+  // Draw pixel sprite into preview canvas
+  const canvas=document.getElementById('preview-sprite');
+  if(canvas) drawSpriteOnCanvas(canvas, f, false);
+}
+
+function saveFighterToRoster(){
+  const f=window._pendingFighter;
+  if(!f){ alert('Generate a fighter first!'); return; }
+  if(editingIdx>=0){ fighters[editingIdx]=f; editingIdx=-1; }
+  else fighters.push(f);
+  saveFighters(); window._pendingFighter=null;
+  alert(`${f.name} added to the roster! 🥊`);
+  document.querySelectorAll('.nav-btn')[0].click();
+}
+function saveFighters(){
+  try{ localStorage.setItem('fcc_fighters',JSON.stringify(fighters)); }catch(e){}
+}
+
+// ===== FIGHT SETUP =====
+function renderFightSetup(){
+  ['p1','p2'].forEach(p=>{
+    const el=document.getElementById(`${p}-options`);
+    if(!fighters.length){ el.innerHTML=`<div style="color:#666;font-size:13px;padding:10px">No fighters yet!</div>`; return; }
+    el.innerHTML=fighters.map((f,i)=>`
+      <div class="fighter-option" id="${p}-opt-${i}" onclick="selectFighter('${p}',${i})">
+        <div class="fighter-option-avatar" id="${p}-sel-avatar-${i}" style="background:#0d0d1a;overflow:hidden;padding:0"></div>
+        <div><div class="fighter-option-name">${f.name}</div><div class="fighter-option-style">${f.style}</div></div>
+      </div>`).join('');
+    // Draw mini sprites
+    requestAnimationFrame(()=>{
+      fighters.forEach((f,i)=>{
+        const wrap=document.getElementById(`${p}-sel-avatar-${i}`);
+        if(!wrap) return;
+        const c=document.createElement('canvas');
+        c.style.imageRendering='pixelated'; c.style.width='100%'; c.style.height='100%';
+        const ms=1; c.width=SW*ms; c.height=SH*ms;
+        wrap.appendChild(c);
+        const ctx=c.getContext('2d'); ctx.imageSmoothingEnabled=false;
+        const palette=buildPalette(Object.assign({sigColor:f.color||'#e63946'},f.spriteData||{}));
+        const g=buildSpriteGrid(f.spriteData||{},false);
+        for(let r=0;r<SH;r++) for(let col=0;col<SW;col++){
+          const key=g[r]?g[r][col]:'T'; if(!key||key==='T') continue;
+          const color=palette[key]||palette['SK']; if(!color||color.includes('0000')) continue;
+          ctx.fillStyle=color; ctx.fillRect(col*ms,r*ms,ms,ms);
+        }
+      });
+    });
+  });
+  if(fighters.length>=1) selectFighter('p1',0);
+  if(fighters.length>=2) selectFighter('p2',1);
+  else if(fighters.length===1) selectFighter('p2',0);
+}
+function selectFighter(player,idx){
+  if(player==='p1') selectedP1=idx; else selectedP2=idx;
+  document.querySelectorAll(`#${player}-options .fighter-option`).forEach(el=>el.classList.remove('selected'));
+  const opt=document.getElementById(`${player}-opt-${idx}`);
+  if(opt) opt.classList.add('selected');
+}
+
+// ===== FIGHT ENGINE =====
+function startFight(){
+  if(selectedP1===null||selectedP2===null||!fighters.length){ alert('Select fighters!'); return; }
+  document.getElementById('fight-setup').style.display='none';
+  document.getElementById('fight-result').style.display='none';
+  document.getElementById('fight-arena').style.display='block';
+  const isCPU=document.getElementById('cpu-toggle').checked;
+  const f1=JSON.parse(JSON.stringify(fighters[selectedP1]));
+  const f2=JSON.parse(JSON.stringify(fighters[selectedP2]));
+  f1.hp=100; f2.hp=100; f1.power_meter=0; f2.power_meter=0;
+  const stageEl = document.getElementById('fight-stage');
+  const stageW2 = stageEl.offsetWidth || 700;
+  fightState={p1:f1,p2:f2,isCPU,round:1,timeLeft:60,active:true,p1Pos:60,p2Pos:stageW2-140};
+  document.getElementById('p1-hud-name').textContent=f1.name;
+  document.getElementById('p2-hud-name').textContent=f2.name;
+  document.getElementById('round-num').textContent='1';
+  renderSprite('p1',f1,false); renderSprite('p2',f2,true);
+  document.getElementById('name-p1').textContent=f1.name;
+  document.getElementById('name-p2').textContent=f2.name;
+  const stageW = document.getElementById('fight-stage').offsetWidth || 700;
+  document.getElementById('sprite-p1').style.left='60px';
+  document.getElementById('sprite-p2').style.left=(stageW-140)+'px';
+  setupControls(f1,'p1',false); setupControls(f2,'p2',isCPU);
+  document.getElementById('p1-ctrl-name').textContent=f1.name;
+  document.getElementById('p2-ctrl-name').textContent=(isCPU?'CPU: ':'')+f2.name;
+  document.getElementById('battle-log').innerHTML='<span style="color:#f5c842">⚔️ FIGHT!</span>';
+  document.getElementById('ko-overlay').style.display='none';
+  updateHealthBars();
+  if(fightTimer) clearInterval(fightTimer);
+  fightTimer=setInterval(fightTick,1000);
+  // Reset anim state and start idle breathing loops
+  animState.p1.anim='idle'; animState.p2.anim='idle';
+  startIdleLoops();
+  if(isCPU) scheduleCPU();
+}
+
+// ===== SNES PIXEL SPRITE RENDERER =====
+// PIXEL_SCALE: how many screen pixels per "SNES pixel" (3 = ~48x80 sprite displayed at 144x240)
+const PIXEL_SCALE = 3;
+// Sprite grid is 24 wide x 40 tall SNES pixels
+const SW = 24, SH = 40;
+
+function hexToRgb(hex){
+  hex=hex.replace('#','');
+  if(hex.length===3) hex=hex.split('').map(c=>c+c).join('');
+  const n=parseInt(hex,16);
+  return [(n>>16)&255,(n>>8)&255,n&255];
+}
+function rgbToHex(r,g,b){
+  return '#'+[r,g,b].map(v=>Math.min(255,Math.max(0,v)).toString(16).padStart(2,'0')).join('');
+}
+// Darken/lighten a hex color
+function shade(hex,pct){ // pct: -1.0 to +1.0
+  const [r,g,b]=hexToRgb(hex);
+  const f=1+pct;
+  return rgbToHex(Math.round(r*f),Math.round(g*f),Math.round(b*f));
+}
+// Mix two hex colors
+function mix(h1,h2,t=0.5){
+  const [r1,g1,b1]=hexToRgb(h1);
+  const [r2,g2,b2]=hexToRgb(h2);
+  return rgbToHex(Math.round(r1+(r2-r1)*t),Math.round(g1+(g2-g1)*t),Math.round(b1+(b2-b1)*t));
+}
+
+// Build a palette of ~16 colors like a real SNES sprite sheet
+function buildPalette(sd){
+  const skin=sd.skinTone||'#c8a882';
+  const hair=sd.hairColor||'#2a1a0a';
+  const shirt=sd.shirtColor||sd.sigColor||'#e63946';
+  const pants=sd.pantsColor||shade(shirt,-0.4);
+  const shoe=sd.shoeColor||'#111111';
+  const eye=sd.eyeColor||'#3a2a1a';
+  const belt=sd.beltColor||shade(pants,0.3);
+  return {
+    T:'#00000000', // transparent
+    SK: skin,
+    SK2: shade(skin,-0.18),  // skin shadow
+    SK3: shade(skin, 0.20),  // skin highlight
+    HA: hair,
+    HA2: shade(hair, 0.25),  // hair highlight
+    SH: shirt,
+    SH2: shade(shirt,-0.25), // shirt shadow
+    SH3: shade(shirt, 0.30), // shirt highlight
+    PA: pants,
+    PA2: shade(pants,-0.2),  // pants shadow
+    BL: belt,
+    SO: shoe,
+    SO2: shade(shoe,0.3),
+    EY: eye,
+    OU: '#0a0a0a',           // outline
+  };
+}
+
+// 24×40 SNES fighter sprite template — each char maps to palette key
+// Reading top→bottom, left→right. T=transparent
+function buildSpriteGrid(sd, flip){
+  // Choose hair style rows based on hairLength
+  const longHair = (sd.hairLength||'short')==='long';
+  const beard = sd.beard||false;
+  const glasses = sd.glasses||false;
+  const heavyBuild = (sd.build||'medium')==='heavy';
+
+  // 24 wide, 40 tall — SNES fighter silhouette
+  // Uses palette keys: T,SK,SK2,SK3,HA,HA2,SH,SH2,SH3,PA,PA2,BL,SO,SO2,EY,OU
+  const G=[
+  // Row 0-1: hair top
+  'TTTTTTTTTTTTTTTTTTTTTTT T',
+  'TTTTTTTT HAHAAHAHAHAHAH TTTTTT',
+  // Row 2-4: hair/head top
+  'TTTTTTT OUHAHAAHAHAHAHAOU TTTTT'.substring(0,24),
+  'TTTTTT OUHAHAAHAHAHAHAOU TTTTT'.substring(0,24),
+  'TTTTTT OUSKSK3SK3SK3SKSKOu TTTT'.substring(0,24),
+  ];
+
+  // Programmatic approach — build rows as arrays
+  const rows=[];
+  // Helper: pad row to 24
+  const R=(arr)=>{ while(arr.length<24) arr.push('T'); return arr.slice(0,24); };
+
+  // --- HEAD (rows 0-10) ---
+  // Hair rows 0-2
+  rows.push(R(['T','T','T','T','T','T','T','T','HA','HA','HA','HA','HA','HA','HA','HA','T','T','T','T','T','T','T','T']));
+  rows.push(R(['T','T','T','T','T','T','OU','HA','HA','HA2','HA2','HA','HA','HA2','HA','HA','OU','T','T','T','T','T','T','T']));
+  rows.push(R(['T','T','T','T','T','OU','HA','HA','HA2','HA2','HA','HA','HA','HA','HA2','HA','HA','OU','T','T','T','T','T','T']));
+  // Head sides row 3
+  rows.push(R(['T','T','T','T','OU','SK','SK','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK','SK','OU','T','T','T','T','T','T']));
+  // Face rows 4-8
+  rows.push(R(['T','T','T','OU','SK2','SK','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK','SK2','OU','T','T','T','T','T']));
+  // Eyes row 5
+  const eyeRow=glasses
+    ?['T','T','OU','SK','SK','OU','EY','SK3','OU','SK','SK','SK','SK','OU','SK3','EY','OU','SK','SK','OU','T','T','T','T']
+    :['T','T','OU','SK','SK','SK','EY','EY','SK','SK','SK','SK','SK','SK','EY','EY','SK','SK','SK','OU','T','T','T','T'];
+  rows.push(R(eyeRow));
+  rows.push(R(['T','T','OU','SK','SK2','SK','SK','SK','SK2','SK','SK','SK','SK','SK','SK','SK','SK','SK2','SK','OU','T','T','T','T']));
+  // Nose row
+  rows.push(R(['T','T','OU','SK','SK2','SK','SK','SK2','SK2','SK','SK','SK','SK','SK2','SK2','SK','SK','SK2','SK','OU','T','T','T','T']));
+  // Mouth row — beard or plain
+  const mouthRow=beard
+    ?['T','T','OU','SK','HA','HA','HA','HA2','HA2','HA2','HA','HA','HA2','HA2','HA2','HA','HA','HA','SK','OU','T','T','T','T']
+    :['T','T','OU','SK','SK2','SK','SK','SK2','SK','SK','SK2','SK2','SK','SK','SK2','SK','SK','SK2','SK','OU','T','T','T','T'];
+  rows.push(R(mouthRow));
+  // Chin
+  rows.push(R(['T','T','T','OU','SK','SK2','SK','SK','SK2','SK','SK','SK','SK','SK','SK','SK','SK2','SK','OU','T','T','T','T','T']));
+  // Long hair sides
+  if(longHair){
+    rows.push(R(['T','T','HA','HA','OU','SK2','SK','SK','SK','SK','SK','SK','SK','SK','SK','SK','SK2','OU','HA','HA','T','T','T','T']));
+  } else {
+    rows.push(R(['T','T','T','OU','SK2','SK','SK','SK','SK','SK','SK','SK','SK','SK','SK','SK','SK2','OU','T','T','T','T','T','T']));
+  }
+  // --- NECK row 11 ---
+  rows.push(R(['T','T','T','T','T','OU','SK','SK2','SK','SK','SK','SK','SK','SK','SK2','SK','OU','T','T','T','T','T','T','T']));
+  // --- SHOULDERS row 12 ---
+  rows.push(R(['T','T','OU','SH3','SH','SH','SH','SH2','SH','SH','SH','SH','SH','SH','SH2','SH','SH','SH','SH3','OU','T','T','T','T']));
+  // --- UPPER ARMS + CHEST rows 13-19 ---
+  rows.push(R(['T','OU','SH2','SK','SK','SH','SH3','SH','SH','SH','SH','SH','SH','SH','SH','SH3','SH','SH','SK','SK','SH2','OU','T','T']));
+  rows.push(R(['OU','SK','SK2','SK','SH2','SH','SH3','SH2','SH','SH','SH','SH','SH','SH','SH2','SH3','SH','SH2','SH','SK2','SK','SK','OU','T']));
+  rows.push(R(['OU','SK','SK2','SK','SH2','SH','SH','SH2','SH','SH2','SH','SH','SH2','SH','SH2','SH','SH','SH2','SH','SK2','SK','SK','OU','T']));
+  rows.push(R(['OU','SK','SK2','SK2','SH2','SH3','SH','SH','SH','SH','SH','SH','SH','SH','SH','SH','SH3','SH2','SH','SK2','SK2','SK','OU','T']));
+  rows.push(R(['T','OU','SK2','SK2','SH2','SH','SH','SH2','BL','BL','BL','BL','BL','BL','SH2','SH','SH','SH2','SH','SK2','SK2','OU','T','T']));
+  rows.push(R(['T','OU','SK2','SK2','SH2','SH','SH','SH2','SH','SH','SH','SH','SH','SH','SH2','SH','SH','SH2','SH','SK2','SK2','OU','T','T']));
+  rows.push(R(['T','T','OU','SK2','SH2','SH','SH3','SH','SH','SH','SH','SH','SH','SH','SH','SH3','SH','SH2','SH','SK2','OU','T','T','T']));
+  // --- BELT row 20 ---
+  rows.push(R(['T','T','T','OU','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','OU','T','T','T','T']));
+  // --- HIPS row 21 ---
+  const hipW = heavyBuild ? 20 : 16;
+  const hipOff = Math.floor((24-hipW)/2);
+  const hipRow=Array(24).fill('T');
+  hipRow[hipOff]='OU'; hipRow[hipOff+hipW-1]='OU';
+  for(let i=hipOff+1;i<hipOff+hipW-1;i++) hipRow[i]=(i<hipOff+Math.floor(hipW/2))?'PA':'PA2';
+  rows.push(R(hipRow));
+  // --- THIGHS rows 22-26 ---
+  for(let r=0;r<5;r++){
+    const row=Array(24).fill('T');
+    const lx=4+(r>2?1:0), rx=17-(r>2?1:0);
+    row[lx]='OU'; row[lx+1]='PA'; row[lx+2]='PA'; row[lx+3]='PA2'; row[lx+4]='OU';
+    row[rx-4]='OU'; row[rx-3]='PA2'; row[rx-2]='PA'; row[rx-1]='PA'; row[rx]='OU';
+    rows.push(R(row));
+  }
+  // --- KNEES row 27 ---
+  rows.push(R(['T','T','T','T','OU','PA','PA2','PA','OU','T','T','T','T','T','OU','PA','PA2','PA','OU','T','T','T','T','T']));
+  // --- SHINS rows 28-33 ---
+  for(let r=0;r<6;r++){
+    const row=Array(24).fill('T');
+    row[4]='OU'; row[5]='PA'; row[6]='PA2'; row[7]='PA'; row[8]='OU';
+    row[15]='OU'; row[16]='PA'; row[17]='PA2'; row[18]='PA'; row[19]='OU';
+    rows.push(R(row));
+  }
+  // --- ANKLES row 34 ---
+  rows.push(R(['T','T','T','T','OU','SO2','SO','SO2','OU','T','T','T','T','T','OU','SO2','SO','SO2','OU','T','T','T','T','T']));
+  // --- FEET rows 35-39 ---
+  for(let r=0;r<5;r++){
+    const row=Array(24).fill('T');
+    const spread=r*1;
+    const lStart=3-Math.floor(spread/2), rStart=14+Math.floor(spread/2);
+    for(let i=lStart;i<lStart+7;i++) row[Math.max(0,Math.min(23,i))]=i===lStart||i===lStart+6?'OU':(i<lStart+3?'SO2':'SO');
+    for(let i=rStart;i<rStart+7;i++) row[Math.max(0,Math.min(23,i))]=i===rStart||i===rStart+6?'OU':(i<rStart+3?'SO2':'SO');
+    rows.push(R(row));
+  }
+
+  // Ensure exactly SH rows
+  while(rows.length<SH) rows.push(Array(SW).fill('T'));
+  return rows.slice(0,SH);
+}
+
+function drawSpriteOnCanvas(canvas, fighter, flip){
+  const sd = fighter.spriteData || {};
+  const palette = buildPalette({
+    skinTone: sd.skinTone||'#c8a882',
+    hairColor: sd.hairColor||'#2a1a0a',
+    sigColor: fighter.color||'#e63946',
+    shirtColor: sd.shirtColor||fighter.color||'#e63946',
+    pantsColor: sd.pantsColor||null,
+    shoeColor: sd.shoeColor||'#111111',
+    eyeColor: sd.eyeColor||'#3a2a1a',
+    beltColor: sd.beltColor||null,
+    beard: sd.beard||false,
+    glasses: sd.glasses||false,
+    hairLength: sd.hairLength||'short',
+    build: sd.build||'medium',
+  });
+
+  // Always build the sprite facing right; flip via CSS transform
+  const grid = buildSpriteGrid(sd, false);
+
+  canvas.width = SW * PIXEL_SCALE;
+  canvas.height = SH * PIXEL_SCALE;
+  // Use CSS scaleX to flip P2 so they face left — no pixel-level mirroring needed
+  canvas.style.transform = flip ? 'scaleX(-1)' : 'scaleX(1)';
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+
+  for(let row=0; row<SH; row++){
+    for(let col=0; col<SW; col++){
+      const key = grid[row] ? grid[row][col] : 'T';
+      if(!key || key==='T') continue;
+      const color = palette[key] || palette['SK'];
+      if(!color || color.includes('0000')) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect(col*PIXEL_SCALE, row*PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
+    }
+  }
+}
+
+function renderSprite(player, fighter, flip){
+  const body = document.getElementById(`body-${player}`);
+  if(!body) return;
+  body.innerHTML = '';
+  const canvas = document.createElement('canvas');
+  canvas.style.imageRendering = 'pixelated';
+  canvas.style.imageRendering = 'crisp-edges';
+  canvas.style.display = 'block';
+  canvas.style.position = 'relative';
+  body.appendChild(canvas);
+  drawSpriteOnCanvas(canvas, fighter, flip);
+}
+
+// Extract appearance data from photo using Claude Vision
+async function extractSpriteData(imageBase64, description, personality){
+  const prompt = `Analyze this person's appearance and return ONLY a JSON object with these exact fields — no markdown, no extra text:
+{
+  "skinTone": "hex color code for their skin tone e.g. #c8a882",
+  "hairColor": "hex color e.g. #2a1a0a",
+  "hairLength": "short or long",
+  "eyeColor": "hex color e.g. #3a5a8a",
+  "beard": true or false,
+  "glasses": true or false,
+  "build": "slim, medium, or heavy",
+  "shirtColor": "hex color of their top/shirt",
+  "pantsColor": "hex color of their pants/shorts",
+  "shoeColor": "hex color of their shoes"
+}
+Extra context about this person: ${description||''} ${personality||''}
+If you cannot see a clear shirt/pants/shoe color, infer from the description or use a reasonable default.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body: JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:400,
+      system:'You extract appearance data from photos and return only JSON. No markdown, no backticks.',
+      messages:[{role:'user', content:[
+        {type:'image', source:{type:'base64', media_type:'image/jpeg', data: imageBase64.split(',')[1]}},
+        {type:'text', text: prompt}
+      ]}]
+    })
+  });
+  const data = await resp.json();
+  if(!resp.ok || !data.content?.[0]) return {};
+  let text = data.content[0].text.trim().replace(/```json|```/g,'').trim();
+  const s=text.indexOf('{'), e=text.lastIndexOf('}');
+  if(s>-1&&e>-1) text=text.slice(s,e+1);
+  try{ return JSON.parse(text); }catch{ return {}; }
+}
+function adjustColor(hex,amt){
+  try{
+    hex=hex.replace('#','');
+    if(hex.length===3) hex=hex.split('').map(c=>c+c).join('');
+    const n=parseInt(hex,16);
+    const r=Math.min(255,Math.max(0,(n>>16)+amt));
+    const g=Math.min(255,Math.max(0,((n>>8)&0xff)+amt));
+    const b=Math.min(255,Math.max(0,(n&0xff)+amt));
+    return `#${((r<<16)|(g<<8)|b).toString(16).padStart(6,'0')}`;
+  }catch{return '#888888'}
+}
+
+function setupControls(fighter,player,isCPU){
+  const moves=fighter.moves||{};
+  const btns=document.getElementById(`${player}-moves`);
+  if(isCPU){ btns.innerHTML='<span style="color:#555;font-size:12px">CPU controlled — or connect 2nd gamepad</span>'; return; }
+  const list=[
+    {k:'light',l:moves.light||'Light',c:''},
+    {k:'heavy',l:moves.heavy||'Heavy',c:''},
+    {k:'special1',l:moves.special1||'Special 1',c:'special'},
+    {k:'special2',l:moves.special2||'Special 2',c:'special'},
+    {k:'super',l:moves.super||'SUPER',c:'super-btn'},
+    {k:'block',l:'Block',c:''},
+  ];
+  btns.innerHTML=list.map(m=>`<button class="move-btn ${m.c}" onclick="doMove('${player}','${m.k}')">${m.l}</button>`).join('');
+}
+
+function doMove(player,moveKey){
+  if(!fightState||!fightState.active) return;
+  if(player==='p2'&&fightState.isCPU) return;
+  const attacker=fightState[player];
+  const defPlayer=player==='p1'?'p2':'p1';
+  const defender=fightState[defPlayer];
+  executeMove(attacker,defender,player,defPlayer,moveKey);
+}
+
+function executeMove(attacker,defender,atkPlayer,defPlayer,moveKey){
+  const moveName=attacker.moves?.[moveKey]||moveKey;
+  const isBlock=Math.random()<0.12;
+  if(isBlock&&moveKey!=='block'){
+    addLog(`${defender.name} blocks ${moveName}!`,'log-block');
+    animateAttack(atkPlayer, moveKey); animateBlock(defPlayer); return;
+  }
+  const stats=attacker.stats||{};
+  let dmg=0;
+  switch(moveKey){
+    case 'light': dmg=Math.floor(Math.random()*5+3)+(Math.floor((stats.speed||5)/2)); break;
+    case 'heavy': dmg=Math.floor(Math.random()*8+6)+(Math.floor((stats.power||5)/2)); break;
+    case 'special1':
+      if(attacker.power_meter<30){ addLog(`${attacker.name} needs more power!`,'log-miss'); return; }
+      dmg=Math.floor(Math.random()*10+10)+(stats.special||5); attacker.power_meter=Math.max(0,attacker.power_meter-30); break;
+    case 'special2':
+      if(attacker.power_meter<40){ addLog(`${attacker.name} needs more power!`,'log-miss'); return; }
+      dmg=Math.floor(Math.random()*12+12)+(stats.special||5); attacker.power_meter=Math.max(0,attacker.power_meter-40); break;
+    case 'super':
+      if(attacker.power_meter<80){ addLog(`Fill the power bar first!`,'log-miss'); return; }
+      dmg=Math.floor(Math.random()*20+25)+(stats.special||5); attacker.power_meter=0;
+      showFlash(); addLog(`💥 ${attacker.name} UNLEASHES ${moveName}!!`,'log-special'); break;
+    case 'block': addLog(`${attacker.name} holds guard...`,'log-block'); return;
+    default: dmg=Math.floor(Math.random()*5+3);
+  }
+  if(Math.random()<0.08){ addLog(`${attacker.name} misses!`,'log-miss'); animateAttack(atkPlayer, moveKey); return; }
+  dmg=Math.max(1,dmg-Math.floor((defender.stats?.defense||5)/3));
+  defender.hp=Math.max(0,defender.hp-dmg);
+  attacker.power_meter=Math.min(100,(attacker.power_meter||0)+dmg*0.8);
+  if(moveKey!=='super') addLog(`${attacker.name} hits ${moveName} for ${dmg} dmg!`,'log-hit');
+  animateAttack(atkPlayer, moveKey); animateHit(defPlayer);
+  updateHealthBars(); checkKO();
+}
+
+// ===== ANIMATION SYSTEM =====
+// Each animation is an array of frame-drawing functions that modify joint offsets
+// We redraw the sprite each frame using offset params instead of the static grid
+
+const animState = {
+  p1: { anim:'idle', frame:0, timer:null, idleT:0 },
+  p2: { anim:'idle', frame:0, timer:null, idleT:0 }
+};
+
+// Start idle breathing loop for both players after fight begins
+function startIdleLoops(){
+  ['p1','p2'].forEach(p=>{
+    if(animState[p].idleLoop) cancelAnimationFrame(animState[p].idleLoop);
+    let t=0;
+    const loop=()=>{
+      if(!fightState||!fightState.active){ return; }
+      if(animState[p].anim==='idle'){
+        t+=0.06;
+        const canvas=getCanvas(p);
+        if(canvas) drawAnimFrame(canvas, fightState[p], p==='p2', 'idle', t);
+      }
+      animState[p].idleLoop=requestAnimationFrame(loop);
+    };
+    animState[p].idleLoop=requestAnimationFrame(loop);
+  });
+}
+
+function getCanvas(player){
+  const body=document.getElementById(`body-${player}`);
+  return body ? body.querySelector('canvas') : null;
+}
+
+// Master frame drawer — takes joint offsets and draws on the canvas
+function drawAnimFrame(canvas, fighter, flip, animName, t){
+  if(!canvas) return;
+  const sd=fighter.spriteData||{};
+  const palette=buildPalette({
+    skinTone:sd.skinTone||'#c8a882', hairColor:sd.hairColor||'#2a1a0a',
+    sigColor:fighter.color||'#e63946', shirtColor:sd.shirtColor||fighter.color||'#e63946',
+    pantsColor:sd.pantsColor||null, shoeColor:sd.shoeColor||'#111111',
+    eyeColor:sd.eyeColor||'#3a2a1a', beltColor:sd.beltColor||null,
+    beard:sd.beard||false, glasses:sd.glasses||false,
+    hairLength:sd.hairLength||'short', build:sd.build||'medium',
+  });
+  const P=PIXEL_SCALE;
+  canvas.width=SW*P; canvas.height=SH*P;
+  canvas.style.transform=flip?'scaleX(-1)':'scaleX(1)';
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.imageSmoothingEnabled=false;
+
+  // Get per-anim offsets
+  const off=getAnimOffsets(animName, t, fighter.color||'#e63946');
+
+  // Helper: fill a pixel rect
+  const px=(x,y,w,h,col)=>{
+    if(!col||col==='T') return;
+    ctx.fillStyle=col;
+    ctx.fillRect(Math.round(x)*P, Math.round(y)*P, Math.round(w)*P, Math.round(h)*P);
+  };
+  const C=palette;
+
+  // Body Y bob (idle breathing / hit stagger)
+  const bY=off.bodyY||0;
+  const headTilt=off.headTilt||0;
+  const lArmAngle=off.lArmAngle||0; // degrees, 0=down
+  const rArmAngle=off.rArmAngle||0;
+  const lArmExtend=off.lArmExtend||0; // extra length
+  const rArmExtend=off.rArmExtend||0;
+  const lLegKick=off.lLegKick||0;
+  const rLegKick=off.rLegKick||0;
+  const lean=off.lean||0; // body lean px
+  const hitFlash=off.hitFlash||false;
+
+  if(hitFlash){
+    ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    return;
+  }
+
+  // SHADOW
+  px(2,37,20,2,'rgba(0,0,0,0.35)');
+
+  // FEET / SHOES
+  const lFootX=4+lean, rFootX=14+lean;
+  const lFootY=35+bY+(lLegKick>0?-lLegKick*0.3:0);
+  const rFootY=35+bY+(rLegKick>0?-rLegKick*0.3:0);
+  px(lFootX,lFootY,7,3,C.SO2); px(lFootX+1,lFootY,5,2,C.SO);
+  px(rFootX,rFootY,7,3,C.SO2); px(rFootX+1,rFootY,5,2,C.SO);
+
+  // SHINS
+  const lShinX=5+lean, rShinX=15+lean;
+  const lShinKick=lLegKick*0.6, rShinKick=rLegKick*0.6;
+  for(let i=0;i<6;i++){
+    px(lShinX,29+bY-i*0.1+lShinKick*(i/6),4,1,C.PA);
+    px(lShinX+1,29+bY-i*0.1+lShinKick*(i/6),2,1,C.PA2);
+    px(rShinX,29+bY-i*0.1+rShinKick*(i/6),4,1,C.PA);
+    px(rShinX+1,29+bY-i*0.1+rShinKick*(i/6),2,1,C.PA2);
+  }
+
+  // THIGHS
+  const lThighKick=lLegKick*0.4, rThighKick=rLegKick*0.4;
+  for(let i=0;i<5;i++){
+    px(lShinX-1,22+bY+lThighKick*(i/5),5,1,C.PA);
+    px(rShinX-1,22+bY+rThighKick*(i/5),5,1,C.PA);
+  }
+
+  // BELT
+  px(5+lean,20+bY,14,2,C.BL);
+
+  // TORSO
+  for(let i=0;i<8;i++){
+    const rowCol=i<2?C.SH3:(i<6?C.SH:C.SH2);
+    px(4+lean,12+bY+i,16,1,rowCol);
+    px(4+lean,12+bY+i,1,1,C.OU); px(19+lean,12+bY+i,1,1,C.OU);
+  }
+  // Belt buckle highlight
+  px(10+lean,20+bY,4,1,C.SH3);
+
+  // LEFT ARM (punching arm when rArmAngle != 0)
+  drawArm(ctx,P,C, 4+lean, 13+bY, lArmAngle, lArmExtend, false);
+  // RIGHT ARM
+  drawArm(ctx,P,C, 19+lean, 13+bY, rArmAngle, rArmExtend, true);
+
+  // NECK
+  px(10+lean+headTilt,9+bY,4,3,C.SK);
+
+  // HEAD
+  const hx=7+lean+headTilt, hy=0+bY;
+  px(hx,hy+2,10,8,C.SK);
+  px(hx+1,hy+1,8,1,C.SK); px(hx+1,hy+9,8,1,C.SK2);
+  // Hair
+  px(hx,hy,10,3,C.HA); px(hx+1,hy,8,2,C.HA2);
+  // Eyes
+  const eyeY=hy+4;
+  px(hx+2,eyeY,2,2,C.EY); px(hx+6,eyeY,2,2,C.EY);
+  px(hx+2,eyeY,2,1,'rgba(255,255,255,0.4)');
+  px(hx+6,eyeY,2,1,'rgba(255,255,255,0.4)');
+  // Outline
+  px(hx-1,hy+2,1,8,C.OU); px(hx+10,hy+2,1,8,C.OU);
+  px(hx,hy+10,10,1,C.OU);
+  // Beard?
+  if(sd.beard) px(hx+1,hy+7,8,3,C.HA);
+  // Glasses?
+  if(sd.glasses){
+    px(hx+1,eyeY-1,4,4,C.OU); px(hx+5,eyeY-1,4,4,C.OU);
+    px(hx+5,eyeY+1,1,1,C.OU); // bridge
+  }
+
+  // HIT/EFFECT overlays
+  if(off.hitSpark){
+    const sc=off.hitSpark;
+    ctx.fillStyle=sc==='super'?'rgba(255,200,0,0.85)':'rgba(255,80,0,0.75)';
+    ctx.beginPath();
+    ctx.arc((off.sparkX||12)*P,(off.sparkY||15)*P,(sc==='super'?5:3)*P,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.beginPath();
+    ctx.arc((off.sparkX||12)*P,(off.sparkY||15)*P,(sc==='super'?2:1)*P,0,Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function drawArm(ctx,P,C, baseX,baseY, angle, extend, isRight){
+  // angle: 0=hanging down, negative=raised/punching forward, positive=down-kick
+  const len=6+extend;
+  const rad=angle*(Math.PI/180);
+  const dx=Math.sin(rad)*len;
+  const dy=Math.cos(rad)*len;
+  // Upper arm
+  for(let i=0;i<4;i++){
+    const t=i/4;
+    ctx.fillStyle=C.SH2;
+    ctx.fillRect(Math.round((baseX+dx*t*0.5)*P), Math.round((baseY+dy*t*0.5)*P), P*2, P);
+  }
+  // Forearm + glove
+  for(let i=0;i<4;i++){
+    const t=0.5+i/8;
+    ctx.fillStyle=i<2?C.SK:C.SH3;
+    ctx.fillRect(Math.round((baseX+dx*t)*P), Math.round((baseY+dy*t)*P), P*2, P);
+  }
+  // Fist/glove
+  ctx.fillStyle=C.SH3;
+  ctx.fillRect(Math.round((baseX+dx*0.95)*P)-P, Math.round((baseY+dy*0.95)*P)-P, P*3, P*3);
+}
+
+// Returns joint offsets for each animation at time t
+function getAnimOffsets(animName, t, sigColor){
+  switch(animName){
+
+    case 'idle': {
+      const bob=Math.sin(t)*0.6;
+      return { bodyY:bob, lArmAngle:8+Math.sin(t*0.8)*3, rArmAngle:-(8+Math.sin(t*0.8+1)*3) };
+    }
+
+    case 'light': { // Quick jab — right arm shoots straight forward
+      const p=Math.min(1,t/0.3);
+      const retract=t>0.3?(1-(t-0.3)/0.2):0;
+      const ext=p<0.5?p*2:(1-p)*2;
+      return {
+        rArmAngle: -80*ext, rArmExtend: ext*4,
+        lean: ext*2,
+        hitSpark: ext>0.8?'light':null, sparkX:20, sparkY:12
+      };
+    }
+
+    case 'heavy': { // Big cross punch — lunge forward with full extension
+      const p=Math.min(1,t/0.4);
+      const ext=p<0.5?p*2:(1-(p-0.5)*2);
+      return {
+        rArmAngle: -90*ext, rArmExtend: ext*6,
+        lArmAngle: 30*ext,
+        lean: ext*4, bodyY: ext*-1,
+        hitSpark: ext>0.85?'heavy':null, sparkX:21, sparkY:11
+      };
+    }
+
+    case 'special1': { // Uppercut — drop then rocket upward
+      const p=Math.min(1,t/0.5);
+      const drop=p<0.2?p/0.2:0;
+      const rise=p<0.2?0:Math.min(1,(p-0.2)/0.3);
+      const ret=p>0.5?(p-0.5)/0.5:0;
+      return {
+        bodyY: drop*3 - rise*5 + ret*5,
+        rArmAngle: -100*rise + 20*drop,
+        rArmExtend: rise*5,
+        lean: rise*3 - ret*3,
+        hitSpark: rise>0.8&&ret<0.1?'special':null, sparkX:19, sparkY:4
+      };
+    }
+
+    case 'special2': { // Spinning roundhouse kick
+      const p=Math.min(1,t/0.55);
+      const kick=p<0.5?p/0.5:1-(p-0.5)/0.5;
+      return {
+        lLegKick: kick*10,
+        rLegKick: -kick*3,
+        lean: -kick*3,
+        lArmAngle: kick*40,
+        rArmAngle: kick*-20,
+        hitSpark: kick>0.85?'special':null, sparkX:4, sparkY:24
+      };
+    }
+
+    case 'super': { // Full body explosion — flash + dramatic pose
+      const p=Math.min(1,t/0.8);
+      const pulse=Math.sin(p*Math.PI*4)*0.5+0.5;
+      const launch=p<0.3?p/0.3:1;
+      return {
+        bodyY: -launch*4,
+        rArmAngle: -110*launch,
+        lArmAngle: 60*launch,
+        rArmExtend: launch*6,
+        lLegKick: launch*5,
+        lean: launch*5,
+        hitSpark: launch>0.5?'super':null, sparkX:20, sparkY:8,
+        hitFlash: p<0.08
+      };
+    }
+
+    case 'block': { // Arms raised in cross-block
+      return {
+        bodyY:1,
+        lArmAngle: -50, rArmAngle: 50,
+        lArmExtend:1, rArmExtend:1,
+        lean:-2
+      };
+    }
+
+    case 'hit': { // Stagger back
+      const reel=Math.sin(t*Math.PI)*1;
+      return {
+        bodyY: Math.sin(t*Math.PI)*2,
+        lean: -reel*4,
+        headTilt: reel*3,
+        lArmAngle: reel*30, rArmAngle: reel*20,
+      };
+    }
+
+    case 'ko': {
+      return { bodyY:8, lean:-6, lArmAngle:60, rArmAngle:40, lLegKick:-3, headTilt:5 };
+    }
+
+    default:
+      return {};
+  }
+}
+
+// Play an animation sequence on a player, then return to idle
+function playAnim(player, animName, durationMs){
+  const as=animState[player];
+  as.anim=animName;
+  if(as.timer) clearTimeout(as.timer);
+  // Cancel any running anim RAF for this player (idle loop handles it via as.anim check)
+  // For non-idle anims, run our own RAF loop
+  const canvas=getCanvas(player);
+  const fighter=fightState?.[player];
+  if(!canvas||!fighter) return;
+  const flip=player==='p2';
+  const start=performance.now();
+
+  const run=(now)=>{
+    if(animState[player].anim!==animName) return; // superseded
+    const t=(now-start)/1000;
+    drawAnimFrame(canvas, fighter, flip, animName, t);
+    if(now-start < durationMs){
+      requestAnimationFrame(run);
+    } else {
+      animState[player].anim='idle';
+      // idle loop resumes automatically
+    }
+  };
+  requestAnimationFrame(run);
+}
+
+function animateAttack(player, moveKey){
+  const dur={light:280, heavy:420, special1:500, special2:550, super:800, block:600}[moveKey]||300;
+  playAnim(player, moveKey, dur);
+}
+function animateHit(player){
+  playAnim(player,'hit',350);
+}
+function animateBlock(player){
+  playAnim(player,'block',500);
+}
+function showFlash(){
+  const f=document.getElementById('attack-flash');
+  f.style.background='rgba(245,200,66,.25)'; f.style.opacity='1';
+  setTimeout(()=>f.style.opacity='0',350);
+}
+function updateHealthBars(){
+  ['p1','p2'].forEach(p=>{
+    const f=fightState[p];
+    const pct=Math.max(0,f.hp);
+    const bar=document.getElementById(`${p}-health-bar`);
+    bar.style.width=pct+'%';
+    bar.style.background=pct>50?'#39d353':pct>25?'#f5c842':'#e63946';
+    document.getElementById(`${p}-power-bar`).style.width=Math.round(f.power_meter||0)+'%';
+  });
+}
+function checkKO(){
+  if(fightState.p1.hp<=0||fightState.p2.hp<=0){
+    fightState.active=false;
+    clearInterval(fightTimer); clearTimeout(window._cpuTimer);
+    const loser=fightState.p1.hp<=0?'p1':'p2';
+    // Play KO fall anim on loser
+    animState.p1.anim='ko'; animState.p2.anim='ko';
+    const lCanvas=getCanvas(loser);
+    if(lCanvas) drawAnimFrame(lCanvas, fightState[loser], loser==='p2', 'ko', 0);
+    document.getElementById('ko-overlay').style.display='block';
+    const w=fightState.p1.hp>0?fightState.p1:fightState.p2;
+    setTimeout(()=>showResult(w),1600);
+  }
+}
+function fightTick(){
+  if(!fightState||!fightState.active) return;
+  fightState.timeLeft--;
+  document.getElementById('fight-timer').textContent=fightState.timeLeft;
+  if(fightState.timeLeft<=0){
+    fightState.active=false; clearInterval(fightTimer); clearTimeout(window._cpuTimer);
+    const w=fightState.p1.hp>=fightState.p2.hp?fightState.p1:fightState.p2;
+    showResult(w);
+  }
+}
+function scheduleCPU(){
+  if(!fightState||!fightState.active) return;
+  const delay=1200+Math.random()*2200;
+  window._cpuTimer=setTimeout(()=>{
+    if(!fightState||!fightState.active) return;
+    let pool=['light','light','heavy'];
+    if(fightState.p2.power_meter>=80) pool.push('super','super');
+    if(fightState.p2.power_meter>=40) pool.push('special2');
+    if(fightState.p2.power_meter>=30) pool.push('special1');
+    const move=pool[Math.floor(Math.random()*pool.length)];
+    executeMove(fightState.p2,fightState.p1,'p2','p1',move);
+    scheduleCPU();
+  },delay);
+}
+function showResult(winner){
+  if(winner.name==='Chuckles'){
+    playChucklesFatality(winner);
+  } else {
+    showResultScreen(winner);
+  }
+}
+
+// ===== CHUCKLES FATALITY =====
+function playChucklesFatality(winner){
+  const arena = document.getElementById('fight-arena');
+  const stage = document.getElementById('fight-stage');
+
+  // Keep arena visible, hide the KO overlay for the cinematic
+  document.getElementById('ko-overlay').style.display='none';
+
+  // Figure out which side Chuckles is on
+  const chucklesPlayer = fightState.p1.name==='Chuckles' ? 'p1' : 'p2';
+  const loserPlayer    = chucklesPlayer==='p1' ? 'p2' : 'p1';
+  const loserFighter   = fightState[loserPlayer];
+  const loserFlip      = loserPlayer==='p2';
+
+  // Build loser palette for head drawing
+  const lsd = loserFighter.spriteData||{};
+  const loserPalette = buildPalette({
+    skinTone:lsd.skinTone||'#c8a882', hairColor:lsd.hairColor||'#2a1a0a',
+    sigColor:loserFighter.color||'#888', shirtColor:lsd.shirtColor||'#888',
+    pantsColor:lsd.pantsColor||null, shoeColor:lsd.shoeColor||'#111',
+    eyeColor:lsd.eyeColor||'#333', beard:lsd.beard||false,
+    glasses:lsd.glasses||false, hairLength:lsd.hairLength||'short', build:'medium'
+  });
+
+  // Dark cinematic letterbox
+  const letterbox = document.createElement('div');
+  letterbox.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.0);z-index:5;pointer-events:none;transition:background 0.4s';
+  stage.appendChild(letterbox);
+  setTimeout(()=> letterbox.style.background='rgba(0,0,0,0.55)', 50);
+
+  // FATALITY text banner
+  const banner = document.createElement('div');
+  banner.style.cssText=`position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.2);
+    font-family:'Black Ops One',cursive;font-size:38px;color:#e63946;
+    text-shadow:0 0 20px #e63946,3px 3px 0 #000;z-index:20;white-space:nowrap;
+    opacity:0;transition:transform 0.35s cubic-bezier(.17,.67,.3,1.4),opacity 0.3s;letter-spacing:4px`;
+  banner.textContent='FATALITY';
+  stage.appendChild(banner);
+
+  setTimeout(()=>{ banner.style.transform='translate(-50%,-50%) scale(1)'; banner.style.opacity='1'; }, 400);
+  setTimeout(()=>{ banner.style.opacity='0'; }, 1400);
+
+  // Create a flying head canvas
+  const headCanvas = document.createElement('canvas');
+  headCanvas.width  = SW * PIXEL_SCALE;
+  headCanvas.height = 14 * PIXEL_SCALE; // just the head rows
+  headCanvas.style.cssText=`position:absolute;image-rendering:pixelated;image-rendering:crisp-edges;
+    bottom:140px;${loserPlayer==='p2'?'right':'left'}:60px;z-index:15;display:none;
+    transform-origin:center center`;
+  stage.appendChild(headCanvas);
+
+  // Draw the loser's severed head on the small canvas
+  function drawSeveredHead(canvas, palette, lsd){
+    const P=PIXEL_SCALE;
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.imageSmoothingEnabled=false;
+    const C=palette;
+    const px=(x,y,w,h,col)=>{ if(!col||col==='T') return; ctx.fillStyle=col; ctx.fillRect(x*P,y*P,w*P,h*P); };
+    // Neck stump — dripping red
+    px(8,12,8,2,'#cc0000'); px(9,13,6,1,'#880000');
+    px(10,11,4,1,'#ff2222');
+    // Head
+    px(4,2,16,10,C.SK); px(5,1,14,1,C.SK); px(4,11,16,1,C.SK2);
+    // Hair
+    px(4,0,16,3,C.HA); px(5,0,14,2,C.HA2);
+    // Eyes (X'd out — dead)
+    px(6,4,3,3,C.EY); px(13,4,3,3,C.EY);
+    // Draw X eyes
+    ctx.strokeStyle='#fff'; ctx.lineWidth=P*0.8;
+    ctx.beginPath(); ctx.moveTo(6*P,4*P); ctx.lineTo(9*P,7*P); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(9*P,4*P); ctx.lineTo(6*P,7*P); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(13*P,4*P); ctx.lineTo(16*P,7*P); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(16*P,4*P); ctx.lineTo(13*P,7*P); ctx.stroke();
+    // Beard
+    if(lsd.beard){ px(5,9,14,3,C.HA); }
+    // Glasses
+    if(lsd.glasses){ ctx.strokeStyle=C.OU; ctx.lineWidth=P; ctx.strokeRect(5*P,3*P,5*P,5*P); ctx.strokeRect(13*P,3*P,5*P,5*P); }
+    // Outline
+    ctx.strokeStyle='#000'; ctx.lineWidth=P*0.5;
+    ctx.strokeRect(4*P,0,16*P,12*P);
+  }
+  drawSeveredHead(headCanvas, loserPalette, lsd);
+
+  // Create golf driver canvas for Chuckles
+  const driverCanvas = document.createElement('canvas');
+  driverCanvas.width  = 20*PIXEL_SCALE;
+  driverCanvas.height = 20*PIXEL_SCALE;
+  driverCanvas.style.cssText=`position:absolute;image-rendering:pixelated;bottom:80px;
+    ${chucklesPlayer==='p1'?'left:100px':'right:100px'};z-index:15;display:none;
+    transform-origin:bottom center`;
+  stage.appendChild(driverCanvas);
+
+  function drawDriver(canvas, swing){
+    const P=PIXEL_SCALE;
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.imageSmoothingEnabled=false;
+    const px=(x,y,w,h,col)=>{ ctx.fillStyle=col; ctx.fillRect(x*P,y*P,w*P,h*P); };
+    // Shaft — diagonal based on swing progress
+    const shaftAngle = -60 + swing*150; // degrees: -60 (address) -> 90 (follow through)
+    const rad = shaftAngle*(Math.PI/180);
+    ctx.save();
+    ctx.translate(10*P,18*P);
+    ctx.rotate(rad);
+    // Shaft
+    px(-1,-15,2,15,'#aaaaaa');
+    // Club head (driver — big rectangular head)
+    px(-4,-17,8,4,'#cccccc');
+    px(-4,-17,8,1,'#eeeeee'); // highlight
+    px(-4,-14,8,1,'#888888'); // shadow
+    ctx.restore();
+  }
+
+  // Blood splatter particles
+  function spawnBloodSplatter(stage, x, y){
+    for(let i=0;i<18;i++){
+      const dot=document.createElement('div');
+      const size=2+Math.random()*6;
+      const angle=Math.random()*Math.PI*2;
+      const dist=20+Math.random()*80;
+      dot.style.cssText=`position:absolute;width:${size}px;height:${size}px;border-radius:50%;
+        background:#cc0000;left:${x}px;top:${y}px;z-index:18;pointer-events:none;
+        transition:left ${0.3+Math.random()*0.4}s ease-out,top ${0.3+Math.random()*0.5}s ease-out,opacity 0.6s`;
+      stage.appendChild(dot);
+      setTimeout(()=>{
+        dot.style.left=(x+Math.cos(angle)*dist)+'px';
+        dot.style.top =(y+Math.sin(angle)*dist*0.6)+'px';
+        dot.style.opacity='0';
+      },20);
+      setTimeout(()=>dot.remove(),800);
+    }
+  }
+
+  // ── SEQUENCE TIMELINE ──
+  // t=0ms    : screen darkens, FATALITY text pops
+  // t=800ms  : loser sprite freezes headless, Chuckles raises driver
+  // t=1200ms : driver swings, head launches
+  // t=1500ms : blood splatter, head arcs across screen
+  // t=2400ms : head lands (bounces), Chuckles victory pose
+  // t=3200ms : show result screen
+
+  const chucklesSprite = document.getElementById(`sprite-${chucklesPlayer}`);
+  const loserSprite    = document.getElementById(`sprite-${loserPlayer}`);
+  const chucklesCanvas = getCanvas(chucklesPlayer);
+  const loserBodyCanvas= getCanvas(loserPlayer);
+
+  // t=800 — freeze loser headless
+  setTimeout(()=>{
+    // Draw loser body without head
+    if(loserBodyCanvas){
+      const P=PIXEL_SCALE;
+      const ctx=loserBodyCanvas.getContext('2d');
+      // Erase top 12 rows (the head) and draw a neck stump
+      ctx.clearRect(0,0,loserBodyCanvas.width,12*P);
+      ctx.fillStyle='#cc0000'; ctx.fillRect(8*P,10*P,8*P,3*P);
+      ctx.fillStyle='#880000'; ctx.fillRect(9*P,12*P,6*P,2*P);
+    }
+    // Show severed head above loser
+    headCanvas.style.display='block';
+    // Show driver on Chuckles
+    driverCanvas.style.display='block';
+    drawDriver(driverCanvas, 0);
+  }, 800);
+
+  // t=900–1150 — Chuckles winds up (driver swings back)
+  let swingT=0;
+  const windupInterval=setInterval(()=>{
+    swingT+=0.08;
+    drawDriver(driverCanvas, Math.max(0,swingT*0.3));
+  },30);
+
+  // t=1200 — SWING! Driver slams through, head launches
+  setTimeout(()=>{
+    clearInterval(windupInterval);
+    drawDriver(driverCanvas, 1); // full follow-through
+
+    // Animate Chuckles into a big swing pose
+    if(chucklesCanvas){
+      drawAnimFrame(chucklesCanvas, fightState[chucklesPlayer], chucklesPlayer==='p2', 'heavy', 0.2);
+    }
+
+    // Get stage-relative coords for blood spawn
+    const stageRect=stage.getBoundingClientRect();
+    const headRect=headCanvas.getBoundingClientRect();
+    const bx=headRect.left-stageRect.left+headRect.width/2;
+    const by=headRect.top-stageRect.top+headRect.height/2;
+    spawnBloodSplatter(stage, bx, by);
+
+    // Launch the head across the stage
+    const headStartX = loserPlayer==='p2' ? stage.offsetWidth-160 : 60;
+    const headEndX   = loserPlayer==='p2' ? -40 : stage.offsetWidth+20;
+    const dir        = loserPlayer==='p2' ? -1 : 1;
+
+    headCanvas.style.transition='none';
+    headCanvas.style.bottom='140px';
+    headCanvas.style.left=headStartX+'px';
+    headCanvas.style.right='auto';
+
+    // Arc animation via requestAnimationFrame
+    const launchStart=performance.now();
+    const launchDur=900;
+    function arcHead(now){
+      const t=Math.min(1,(now-launchStart)/launchDur);
+      const x=headStartX+dir*(t*500);
+      const arcY=-(Math.sin(t*Math.PI)*120); // parabolic arc upward then down
+      const rotation=dir*t*720; // spin 2 full rotations
+      const bottomPx=140+arcY;
+      headCanvas.style.left=x+'px';
+      headCanvas.style.bottom=Math.max(42,bottomPx)+'px';
+      headCanvas.style.transform=`rotate(${rotation}deg)`;
+      if(t<1) requestAnimationFrame(arcHead);
+      else {
+        // BOUNCE
+        headCanvas.style.transition='bottom 0.15s ease-out';
+        headCanvas.style.bottom='55px';
+        setTimeout(()=>{ headCanvas.style.bottom='42px'; },150);
+        // THWACK text
+        const thwack=document.createElement('div');
+        thwack.textContent='FORE!';
+        thwack.style.cssText=`position:absolute;font-family:'Black Ops One',cursive;font-size:26px;
+          color:#f5c842;text-shadow:2px 2px 0 #000;left:${x-20}px;bottom:100px;z-index:20;
+          opacity:1;transition:opacity 0.5s,bottom 0.5s`;
+        stage.appendChild(thwack);
+        setTimeout(()=>{ thwack.style.opacity='0'; thwack.style.bottom='150px'; },100);
+        setTimeout(()=>thwack.remove(),700);
+      }
+    }
+    requestAnimationFrame(arcHead);
+
+    // Fade driver out after swing
+    setTimeout(()=>{ driverCanvas.style.opacity='0'; driverCanvas.style.transition='opacity 0.3s'; },400);
+
+  }, 1200);
+
+  // t=2200 — Chuckles victory idle pose + "That's a birdie!" text
+  setTimeout(()=>{
+    if(chucklesCanvas){
+      drawAnimFrame(chucklesCanvas, fightState[chucklesPlayer], chucklesPlayer==='p2', 'idle', 0);
+    }
+    const quip=document.createElement('div');
+    quip.textContent='"That\'s a birdie!"';
+    quip.style.cssText=`position:absolute;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;
+      color:#f5c842;text-shadow:1px 1px 0 #000;
+      ${chucklesPlayer==='p1'?'left:20px':'right:20px'};bottom:155px;z-index:20;
+      opacity:0;transition:opacity 0.4s`;
+    stage.appendChild(quip);
+    setTimeout(()=>quip.style.opacity='1',50);
+    setTimeout(()=>quip.style.opacity='0',1500);
+  }, 2200);
+
+  // t=3200 — clean up overlays and show result
+  setTimeout(()=>{
+    [letterbox, banner, headCanvas, driverCanvas].forEach(el=>el.remove());
+    stage.querySelectorAll('div[style*="FORE"]').forEach(el=>el.remove());
+    showResultScreen(winner);
+  }, 3400);
+}
+
+function showResultScreen(winner){
+  document.getElementById('fight-arena').style.display='none';
+  const res=document.getElementById('fight-result');
+  res.style.display='block';
+  const taunts=winner.taunts||[];
+  const taunt=taunts[Math.floor(Math.random()*taunts.length)]||'';
+  const isChuckles=winner.name==='Chuckles';
+  res.innerHTML=`
+    <div class="fight-arena" style="text-align:center;padding:24px">
+      ${isChuckles?`<div style="font-family:'Black Ops One',cursive;font-size:13px;color:#e63946;letter-spacing:3px;margin-bottom:6px;text-shadow:0 0 10px #e63946">FATALITY</div>`:''}
+      <div style="font-family:'Black Ops One',cursive;font-size:13px;color:#e63946;letter-spacing:3px;margin-bottom:10px">WINNER</div>
+      <div style="margin-bottom:10px">${winner.photo?`<img src="${winner.photo}" style="width:90px;height:90px;border-radius:50%;border:4px solid #f5c842;object-fit:cover">`:`<span style="font-size:64px">${winner.emoji||'🏆'}</span>`}</div>
+      <div style="font-family:'Black Ops One',cursive;font-size:28px;color:#f5c842">${winner.name}</div>
+      <div style="font-size:12px;color:#e63946;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">${winner.title||''}</div>
+      <div style="font-size:14px;color:#aaa;font-style:italic;margin-bottom:4px">"${isChuckles?'That\'s a birdie!':(winner.winQuote||'Victory is mine!')}"</div>
+      ${taunt?`<div style="font-size:12px;color:#666;margin-bottom:16px">"${taunt}"</div>`:''}
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+        <button class="btn btn-gold" onclick="startFight()">Rematch</button>
+        <button class="btn btn-outline" onclick="endFight()">Character Select</button>
+      </div>
+    </div>`;
+}
+function addLog(msg,cls=''){
+  const log=document.getElementById('battle-log');
+  const el=document.createElement('div');
+  el.className=cls; el.textContent=msg;
+  log.appendChild(el); log.scrollTop=log.scrollHeight;
+}
+function endFight(){
+  if(fightTimer) clearInterval(fightTimer);
+  clearTimeout(window._cpuTimer); fightState=null;
+  document.getElementById('fight-arena').style.display='none';
+  document.getElementById('fight-result').style.display='none';
+  document.getElementById('fight-setup').style.display='block';
+  renderFightSetup(); updateGamepadStatus();
+}
+
+// Init
+renderRoster();
+updateGamepadStatus();
+setInterval(updateGamepadStatus, 3000);
+</script>
+</body>
+</html>
