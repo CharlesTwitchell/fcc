@@ -900,14 +900,23 @@ function mix(h1,h2,t=0.5){
   const [r2,g2,b2]=hexToRgb(h2);
   return rgbToHex(Math.round(r1+(r2-r1)*t),Math.round(g1+(g2-g1)*t),Math.round(b1+(b2-b1)*t));
 }
+// Lighten a color toward white if it's too dark to read against the fight stage's near-black floor
+function ensureVisible(hex,minLum){
+  const [r,g,b]=hexToRgb(hex);
+  const lum=0.299*r+0.587*g+0.114*b;
+  if(lum>=minLum) return hex;
+  return mix(hex,'#ffffff',Math.min(0.65,(minLum-lum)/255));
+}
 
 // Build a palette of ~16 colors like a real SNES sprite sheet
 function buildPalette(sd){
   const skin=sd.skinTone||'#c8a882';
   const hair=sd.hairColor||'#2a1a0a';
   const shirt=sd.shirtColor||sd.sigColor||'#e63946';
-  const pants=sd.pantsColor||shade(shirt,-0.4);
-  const shoe=sd.shoeColor||'#111111';
+  // Pants/shoes sit against the stage's near-black floor, so floor their brightness
+  // or they visually vanish regardless of what color was picked/generated.
+  const pants=ensureVisible(sd.pantsColor||shade(shirt,-0.4), 70);
+  const shoe=ensureVisible(sd.shoeColor||'#3a3a42', 70);
   const eye=sd.eyeColor||'#3a2a1a';
   const belt=sd.beltColor||shade(pants,0.3);
   return {
@@ -921,10 +930,10 @@ function buildPalette(sd){
     SH2: shade(shirt,-0.25), // shirt shadow
     SH3: shade(shirt, 0.30), // shirt highlight
     PA: pants,
-    PA2: shade(pants,-0.2),  // pants shadow
+    PA2: shade(pants,-0.15), // pants shadow
     BL: belt,
     SO: shoe,
-    SO2: shade(shoe,0.3),
+    SO2: shade(shoe,0.35),
     EY: eye,
     OU: '#0a0a0a',           // outline
   };
@@ -1350,10 +1359,13 @@ function drawAnimFrame(canvas, fighter, flip, animName, t){
   px(hx,hy+10,10,1,C.OU);
   // Beard?
   if(sd.beard) px(hx+1,hy+7,8,3,C.HA);
-  // Glasses?
+  // Glasses? Draw as thin hollow lens frames hugging the eye row, not filled blocks
   if(sd.glasses){
-    px(hx+1,eyeY-1,4,4,C.OU); px(hx+5,eyeY-1,4,4,C.OU);
-    px(hx+5,eyeY+1,1,1,C.OU); // bridge
+    px(hx+1,eyeY-1,4,1,C.OU); px(hx+1,eyeY+2,4,1,C.OU); // left lens top/bottom rim
+    px(hx+1,eyeY,1,2,C.OU); px(hx+4,eyeY,1,2,C.OU);     // left lens side rims
+    px(hx+5,eyeY-1,4,1,C.OU); px(hx+5,eyeY+2,4,1,C.OU); // right lens top/bottom rim
+    px(hx+5,eyeY,1,2,C.OU); px(hx+8,eyeY,1,2,C.OU);     // right lens side rims
+    px(hx+4,eyeY,1,1,C.OU); // bridge
   }
 
   // HIT/EFFECT overlays
@@ -1374,7 +1386,9 @@ function drawArm(ctx,P,C, baseX,baseY, angle, extend, isRight){
   // angle: 0=hanging down, negative=raised/punching forward, positive=down-kick
   const len=6+extend;
   const rad=angle*(Math.PI/180);
-  const dx=Math.sin(rad)*len;
+  // Negated so a "punching forward" (negative) angle swings the fist toward +x —
+  // outward, past the body silhouette, toward the opponent — instead of into the torso.
+  const dx=-Math.sin(rad)*len;
   const dy=Math.cos(rad)*len;
   // Upper arm
   for(let i=0;i<4;i++){
