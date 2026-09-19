@@ -3,7 +3,8 @@
 // `wrangler secret put ANTHROPIC_API_KEY`) — it never reaches the browser.
 
 const ALLOWED_ORIGIN = 'https://charlestwitchell.github.io';
-const MAX_BODY_BYTES = 200_000; // guards against oversized/abusive payloads
+// Up to 3 reference photos (client-compressed to ~768px JPEGs) plus JSON overhead.
+const MAX_BODY_BYTES = 3_000_000; // guards against blatantly abusive payloads
 const RATE_LIMIT_PER_MINUTE = 15;
 
 // Best-effort per-isolate rate limiting. Not durable across cold starts or
