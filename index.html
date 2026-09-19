@@ -1106,7 +1106,7 @@ function mulberry32(seed){
 // Downscale a photo into a grid of big blocky "pixels" (smoothed average per
 // block), then posterize the color count and scale back up with no smoothing —
 // the standard trick for turning a real photo into retro pixel art.
-function pixelateImage(ctx, img, w, h, blockCount=140, levels=6){
+function pixelateImage(ctx, img, w, h, blockCount=220, levels=8){
   const smallW=blockCount, smallH=Math.max(1,Math.round(h*(blockCount/w)));
   const small=document.createElement('canvas');
   small.width=smallW; small.height=smallH;
