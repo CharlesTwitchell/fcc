@@ -382,6 +382,11 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
 </div>
 
 <script>
+// Cloudflare Worker that holds the Anthropic API key server-side and proxies
+// fighter-generation requests — see worker/README.md to deploy your own.
+// Update this after running `wrangler deploy`.
+const FIGHTER_API_URL = 'https://fcc-fighter-proxy.REPLACE-WITH-YOUR-SUBDOMAIN.workers.dev';
+
 // ===== STATE =====
 let fighters = [];
 try{ fighters = JSON.parse(localStorage.getItem('fcc_fighters')||'[]'); }catch(e){}
@@ -684,12 +689,10 @@ Return ONLY a valid JSON object, no markdown, no backticks:
       ?[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:uploadedImages[0].split(',')[1]}},{type:'text',text:userPrompt}]
       :userPrompt;
 
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    const resp=await fetch(FIGHTER_API_URL,{
       method:'POST',
       headers:{
-        'Content-Type':'application/json',
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
+        'Content-Type':'application/json'
       },
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
