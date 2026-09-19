@@ -120,6 +120,13 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
 .move-btn.super-btn{border-color:#e63946;color:#e63946;font-size:11px}
 .move-btn.super-btn:hover{background:#e63946;color:#fff}
 
+.touch-dpad{display:flex;gap:8px;margin-bottom:8px}
+.touch-move-btn{background:#1a1a2e;border:1px solid #457b9d;border-radius:6px;color:#f0f0f0;
+  font-size:18px;padding:8px 0;flex:1;cursor:pointer;user-select:none;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent}
+.touch-move-btn:hover{background:#457b9d}
+.touch-move-btn.pressed{background:#457b9d;transform:scale(.96)}
+
 .battle-log{background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:10px;height:80px;
   overflow-y:auto;font-size:12px;line-height:1.6}
 .log-hit{color:#e63946}.log-block{color:#457b9d}.log-special{color:#f5c842}.log-ko{color:#f5c842;font-weight:700}
@@ -184,6 +191,17 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:#1a1a2e}
 ::-webkit-scrollbar-thumb{background:#444;border-radius:2px}
+
+/* MOBILE */
+@media (max-width:700px){
+  .creator-grid,.select-fighters,.controls-row,.ctrl-grid{grid-template-columns:1fr}
+  .select-fighters .vs-text{padding:4px 0}
+  .fight-stage{height:170px}
+  .move-btn{padding:9px 12px;font-size:13px}
+  .touch-move-btn{padding:14px 0;font-size:22px}
+  .nav-btn{padding:8px 10px;font-size:12px}
+  .game-title{font-size:20px}
+}
 </style>
 </head>
 <body>
@@ -196,12 +214,60 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
   <div class="nav">
     <button class="nav-btn active" onclick="showScreen('roster',this)">Roster</button>
     <button class="nav-btn" onclick="showScreen('creator',this)">+ Add Fighter</button>
+    <button class="nav-btn" onclick="showScreen('levels',this)">🏟️ Stages</button>
     <button class="nav-btn" onclick="showScreen('fight',this)">⚔️ Fight!</button>
   </div>
 
   <!-- ROSTER -->
   <div id="screen-roster" class="screen active">
     <div id="roster-grid" class="roster-grid"></div>
+  </div>
+
+  <!-- LEVELS -->
+  <div id="screen-levels" class="screen">
+    <div id="levels-grid-view">
+      <div id="levels-grid" class="roster-grid"></div>
+    </div>
+    <div id="levels-creator-view" style="display:none">
+      <div class="creator-grid">
+        <div>
+          <div class="creator-panel" style="margin-bottom:12px">
+            <h3>Stage Identity</h3>
+            <label>Stage Name</label>
+            <input type="text" id="lv-name" placeholder="e.g. Rooftop Rumble">
+            <label>Upload Photos (1-3 of a place)</label>
+            <div class="upload-zone" onclick="document.getElementById('lv-upload').click()">
+              <input type="file" id="lv-upload" accept="image/*" multiple onchange="handleLevelUpload(event)">
+              <div style="font-size:24px;color:#444;margin-bottom:6px">🏞️</div>
+              <div style="font-size:13px;color:#666">Click to upload photos</div>
+              <div style="font-size:11px;color:#444;margin-top:4px">Influences stage style</div>
+            </div>
+            <div id="lv-upload-preview" class="upload-preview"></div>
+          </div>
+          <div class="creator-panel">
+            <h3>Mood & Description</h3>
+            <label>Describe the place / vibe</label>
+            <textarea id="lv-description" placeholder="e.g. A neon-lit rooftop at night overlooking the city..."></textarea>
+            <button class="btn btn-primary" style="width:100%;margin-top:10px" onclick="generateLevel()">⚡ Generate Stage with AI</button>
+          </div>
+        </div>
+        <div>
+          <div class="creator-panel">
+            <h3>Generated Stage</h3>
+            <div id="lv-generated-output">
+              <div class="empty-state" style="padding:30px">
+                <div style="font-size:40px;margin-bottom:8px">🏟️</div>
+                <h3>Ready to Create</h3>
+                <p style="font-size:13px">Fill in the details and hit Generate</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:12px">
+        <button class="btn btn-outline btn-sm" onclick="showLevelsGrid()">← Back to Stages</button>
+      </div>
+    </div>
   </div>
 
   <!-- CREATOR -->
@@ -315,6 +381,10 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
         </div>
       </div>
       <div style="text-align:center;margin-bottom:12px">
+        <label style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Stage</label>
+        <select id="stage-select" style="max-width:260px;margin:0 auto;display:block"></select>
+      </div>
+      <div style="text-align:center;margin-bottom:12px">
         <label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
           <input type="checkbox" id="cpu-toggle" checked> CPU controls Player 2
         </label>
@@ -362,10 +432,18 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
         <div class="controls-row">
           <div class="controls-panel">
             <h4 id="p1-ctrl-name">Player 1</h4>
+            <div class="touch-dpad">
+              <button class="touch-move-btn" data-player="p1" data-dir="-1" aria-label="Move left">◀</button>
+              <button class="touch-move-btn" data-player="p1" data-dir="1" aria-label="Move right">▶</button>
+            </div>
             <div class="move-btns" id="p1-moves"></div>
           </div>
           <div class="controls-panel">
             <h4 id="p2-ctrl-name">Player 2</h4>
+            <div class="touch-dpad" id="p2-dpad">
+              <button class="touch-move-btn" data-player="p2" data-dir="-1" aria-label="Move left">◀</button>
+              <button class="touch-move-btn" data-player="p2" data-dir="1" aria-label="Move right">▶</button>
+            </div>
             <div class="move-btns" id="p2-moves"></div>
           </div>
         </div>
@@ -393,6 +471,9 @@ try{ fighters = JSON.parse(localStorage.getItem('fcc_fighters')||'[]'); }catch(e
 let selectedP1=0, selectedP2=1;
 let fightState=null, fightTimer=null;
 let uploadedImages=[], editingIdx=-1;
+let levels = [];
+try{ levels = JSON.parse(localStorage.getItem('fcc_levels')||'[]'); }catch(e){}
+let uploadedLevelImages=[];
 
 // ===== GAMEPAD =====
 const gpState = {
@@ -523,6 +604,30 @@ function moveSprite(player, dir){
   else fightState.p2Pos=newX;
 }
 
+// Touch/mouse hold-to-move D-pad buttons (bound once; works for both touch and click-and-hold)
+function bindTouchDpad(){
+  document.querySelectorAll('.touch-move-btn').forEach(btn=>{
+    const player=btn.dataset.player, dir=parseInt(btn.dataset.dir,10);
+    let timer=null;
+    const start=(e)=>{
+      e.preventDefault();
+      if(player==='p2'&&fightState&&fightState.isCPU) return;
+      btn.classList.add('pressed');
+      moveSprite(player,dir);
+      timer=setInterval(()=>moveSprite(player,dir),80);
+    };
+    const stop=()=>{
+      btn.classList.remove('pressed');
+      if(timer){ clearInterval(timer); timer=null; }
+    };
+    btn.addEventListener('pointerdown',start);
+    btn.addEventListener('pointerup',stop);
+    btn.addEventListener('pointerleave',stop);
+    btn.addEventListener('pointercancel',stop);
+  });
+}
+bindTouchDpad();
+
 // ===== SCREEN NAV =====
 function showScreen(id,btn){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -532,6 +637,7 @@ function showScreen(id,btn){
   if(id==='roster') renderRoster();
   if(id==='fight'){ renderFightSetup(); updateGamepadStatus(); }
   if(id==='creator'&&editingIdx===-1) resetCreator();
+  if(id==='levels') showLevelsGrid();
 }
 
 // ===== ROSTER =====
@@ -820,8 +926,271 @@ function saveFighters(){
   try{ localStorage.setItem('fcc_fighters',JSON.stringify(fighters)); }catch(e){}
 }
 
+// ===== LEVEL/STAGE CREATOR =====
+function showLevelsGrid(){
+  document.getElementById('levels-creator-view').style.display='none';
+  document.getElementById('levels-grid-view').style.display='block';
+  renderLevels();
+}
+function showLevelsCreator(){
+  document.getElementById('levels-grid-view').style.display='none';
+  document.getElementById('levels-creator-view').style.display='block';
+  document.getElementById('lv-name').value='';
+  document.getElementById('lv-description').value='';
+  uploadedLevelImages=[]; document.getElementById('lv-upload-preview').innerHTML='';
+  document.getElementById('lv-generated-output').innerHTML=`<div class="empty-state" style="padding:30px"><div style="font-size:40px;margin-bottom:8px">🏟️</div><h3>Ready to Create</h3><p style="font-size:13px">Fill in the details and hit Generate</p></div>`;
+}
+
+function renderLevels(){
+  const grid=document.getElementById('levels-grid');
+  grid.innerHTML='';
+  const classicCard=document.createElement('div');
+  classicCard.className='fighter-card';
+  classicCard.style.cursor='default';
+  classicCard.innerHTML=`<div class="fighter-avatar" style="background:linear-gradient(180deg,#1a0a2e 60%,#2d1b4e 60%,#3d2560 100%);border-radius:8px;width:100%;height:80px"></div><div class="fighter-name" style="margin-top:8px">Classic Arena</div><div class="fighter-style">Default stage</div>`;
+  grid.appendChild(classicCard);
+
+  levels.forEach((lv,i)=>{
+    const card=document.createElement('div');
+    card.className='fighter-card';
+    card.style.cursor='default';
+    card.innerHTML=`
+      <div id="level-avatar-${i}" style="overflow:hidden;border-radius:8px;width:100%;height:80px;background:#0d0d1a"></div>
+      <div class="fighter-name" style="margin-top:8px">${lv.name}</div>
+      <div class="fighter-style">${lv.style||'stage'}</div>
+      <div class="edit-delete-row">
+        <button class="btn btn-danger btn-sm" style="flex:1" onclick="deleteLevel(${i},event)">✕ Delete</button>
+      </div>`;
+    grid.appendChild(card);
+    requestAnimationFrame(()=>{
+      const wrap=document.getElementById(`level-avatar-${i}`);
+      if(!wrap) return;
+      const c=document.createElement('canvas');
+      c.width=280; c.height=160; c.style.width='100%'; c.style.height='100%';
+      wrap.appendChild(c);
+      paintStagePreview(c, lv);
+    });
+  });
+
+  const add=document.createElement('div');
+  add.className='fighter-card add-card';
+  add.innerHTML=`<div class="add-icon">+</div><div style="font-size:13px;color:#666">Add Stage</div>`;
+  add.onclick=showLevelsCreator;
+  grid.appendChild(add);
+}
+
+function deleteLevel(i,e){
+  e.stopPropagation();
+  if(!confirm('Remove this stage?')) return;
+  levels.splice(i,1); saveLevels(); renderLevels();
+}
+function saveLevels(){
+  try{ localStorage.setItem('fcc_levels',JSON.stringify(levels)); }catch(e){}
+}
+
+function handleLevelUpload(e){
+  const files=Array.from(e.target.files).slice(0,3);
+  uploadedLevelImages=[];
+  Promise.all(files.map(f=>new Promise(res=>{
+    const r=new FileReader();
+    r.onload=async ev=>{ uploadedLevelImages.push(await compressImage(ev.target.result)); res(); };
+    r.readAsDataURL(f);
+  }))).then(()=>{
+    document.getElementById('lv-upload-preview').innerHTML=uploadedLevelImages.map(img=>`<img class="preview-img" src="${img}">`).join('');
+  });
+}
+
+async function generateLevel(){
+  const name=document.getElementById('lv-name').value.trim();
+  const description=document.getElementById('lv-description').value.trim();
+  if(!name){ alert('Give your stage a name!'); return; }
+  if(!description && uploadedLevelImages.length===0){ alert('Add a description or a photo!'); return; }
+
+  const out=document.getElementById('lv-generated-output');
+  out.innerHTML=`<div class="generating-state"><div class="spinner"></div><p style="color:#888;font-size:13px">Designing stage<span class="loading-dots"></span></p></div>`;
+
+  const prompt=`Design a fighting-game stage background based on this description/photo.
+Name: ${name}
+Description: ${description||'Not specified'}
+
+Return ONLY a valid JSON object, no markdown, no backticks:
+{
+  "name": "2-4 word stage name",
+  "description": "1 dramatic sentence describing the stage",
+  "style": "one of exactly: skyline, mountains, nature, arena, water",
+  "skyTop": "hex color for the top of the sky",
+  "skyBottom": "hex color for the sky near the horizon",
+  "silhouette": "hex color for distant background shapes",
+  "ground": "hex color for the floor fighters stand on",
+  "groundShadow": "hex color, a darker shade of the floor color",
+  "accent": "hex color for lights/highlights scattered in the scene"
+}`;
+
+  try{
+    const msgContent = uploadedLevelImages.length>0
+      ? [{type:'image',source:{type:'base64',media_type:'image/jpeg',data:uploadedLevelImages[0].split(',')[1]}},{type:'text',text:prompt}]
+      : prompt;
+    const resp=await fetch(FIGHTER_API_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:400,
+        system:'You are a fighting game stage/background designer. Respond ONLY with valid JSON, no markdown, no backticks.',
+        messages:[{role:'user',content:msgContent}]
+      })
+    });
+    const data=await resp.json();
+    if(!resp.ok || data.type==='error'){
+      throw new Error(data?.error?.message||`API error (${resp.status})`);
+    }
+    if(!data.content||!data.content[0]) throw new Error('Unexpected response from API');
+    let text=data.content[0].text.trim().replace(/```json|```/g,'').trim();
+    const s=text.indexOf('{'), e2=text.lastIndexOf('}');
+    if(s>-1&&e2>-1) text=text.slice(s,e2+1);
+    const lv=JSON.parse(text);
+    lv.id=Date.now();
+    window._pendingLevel=lv;
+    renderGeneratedLevel(lv);
+  }catch(err){
+    out.innerHTML=`<div class="error-msg">⚠️ Generation failed.<br><small>${err.message}</small></div>`;
+  }
+}
+
+function renderGeneratedLevel(lv){
+  document.getElementById('lv-generated-output').innerHTML=`
+    <div class="generated-card">
+      <div style="text-align:center;margin-bottom:10px;background:#0d0d1a;border-radius:8px;padding:12px;border:1px solid #333">
+        <canvas id="lv-preview-canvas" width="300" height="150" style="width:100%;max-width:300px;border-radius:6px;display:block;margin:0 auto"></canvas>
+      </div>
+      <div style="text-align:center;margin-bottom:8px">
+        <div style="font-family:'Black Ops One',cursive;font-size:16px;color:#f5c842">${lv.name}</div>
+        <div style="font-size:12px;color:#aaa;font-style:italic;margin-top:4px">"${lv.description||''}"</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:12px">
+        <button class="btn btn-gold" style="flex:1" onclick="saveLevelFromPending()">Save Stage</button>
+        <button class="btn btn-outline btn-sm" onclick="generateLevel()">Regen</button>
+      </div>
+    </div>`;
+  paintStagePreview(document.getElementById('lv-preview-canvas'), lv);
+}
+
+function saveLevelFromPending(){
+  const lv=window._pendingLevel;
+  if(!lv){ alert('Generate a stage first!'); return; }
+  levels.push(lv); saveLevels(); window._pendingLevel=null;
+  alert(`${lv.name} added! 🏟️`);
+  showLevelsGrid();
+}
+
+// Deterministic PRNG so a level's silhouette looks the same every time it's painted
+function mulberry32(seed){
+  let s=seed|0;
+  return function(){
+    s = s + 0x6D2B79F5 | 0;
+    let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// Paint a stage's sky/floor/silhouette onto any canvas — used for the roster
+// thumbnail, the creator preview, and the live fight-stage background.
+function paintStagePreview(canvas, level){
+  const w=canvas.width, h=canvas.height;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,w,h);
+  if(!level) return;
+
+  const grad=ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, level.skyTop||'#1a0a2e');
+  grad.addColorStop(1, level.skyBottom||'#3d2560');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
+
+  const floorH=h*0.18;
+  ctx.fillStyle=level.groundShadow||'#1a0a0a';
+  ctx.fillRect(0,h-floorH,w,floorH);
+
+  const bandH=h-floorH;
+  ctx.fillStyle=level.silhouette||'#2a1a4e';
+  const style=level.style||'skyline';
+  const rnd=mulberry32(level.id||1);
+
+  if(style==='mountains'){
+    const n=5+Math.floor(rnd()*2);
+    ctx.beginPath(); ctx.moveTo(0,bandH);
+    for(let i=0;i<=n;i++) ctx.lineTo(i*(w/n), bandH-(bandH*0.3+rnd()*bandH*0.6));
+    ctx.lineTo(w,bandH); ctx.closePath(); ctx.fill();
+  } else if(style==='nature'){
+    const n=6+Math.floor(rnd()*4);
+    for(let i=0;i<n;i++){
+      const x=(i+0.5)*(w/n)+(rnd()-0.5)*(w/n)*0.6;
+      const th=bandH*0.3+rnd()*bandH*0.4;
+      ctx.fillRect(x-2,bandH-th*0.4,4,th*0.4);
+      ctx.beginPath(); ctx.arc(x,bandH-th*0.4, 8+rnd()*8,0,Math.PI*2); ctx.fill();
+    }
+  } else if(style==='water'){
+    ctx.fillStyle='rgba(255,255,255,0.18)';
+    for(let i=0;i<8;i++) ctx.fillRect(rnd()*w, bandH-rnd()*bandH*0.3, 20+rnd()*30, 2);
+  } else if(style==='arena'){
+    const n=10;
+    for(let i=0;i<n;i++){
+      const bw=w/n;
+      const bh=bandH*0.3+rnd()*bandH*0.3;
+      ctx.fillRect(i*bw+1, bandH-bh, bw-2, bh);
+    }
+  } else { // skyline
+    let x=0;
+    while(x<w){
+      const bw=w*0.06+rnd()*w*0.08;
+      const bh=bandH*0.25+rnd()*bandH*0.65;
+      ctx.fillRect(x, bandH-bh, bw-2, bh);
+      x+=bw;
+    }
+  }
+
+  if(level.accent){
+    ctx.fillStyle=level.accent;
+    ctx.globalAlpha=0.8;
+    for(let i=0;i<6;i++){
+      ctx.beginPath(); ctx.arc(rnd()*w, bandH-rnd()*bandH*0.6, Math.max(1.5,w*0.006), 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+}
+
+// Apply (or clear) a custom stage on the live fight arena. A null level keeps
+// the original CSS-gradient look untouched — zero regression for the default.
+function applyStage(level){
+  const stage=document.getElementById('fight-stage');
+  let canvas=document.getElementById('stage-canvas');
+  if(!canvas){
+    canvas=document.createElement('canvas');
+    canvas.id='stage-canvas';
+    canvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;display:none';
+    stage.insertBefore(canvas, stage.firstChild);
+  }
+  const crowd=stage.querySelector('.stage-crowd');
+  const floor=stage.querySelector('.stage-floor');
+  if(level){
+    crowd.style.display='none'; floor.style.display='none';
+    canvas.style.display='block';
+    const w=stage.offsetWidth||700, h=stage.offsetHeight||240;
+    canvas.width=w; canvas.height=h;
+    paintStagePreview(canvas, level);
+  } else {
+    crowd.style.display=''; floor.style.display='';
+    canvas.style.display='none';
+  }
+}
+
 // ===== FIGHT SETUP =====
 function renderFightSetup(){
+  const stageSel=document.getElementById('stage-select');
+  if(stageSel){
+    stageSel.innerHTML = `<option value="-1">Classic Arena</option>` +
+      levels.map((lv,i)=>`<option value="${i}">${lv.name}</option>`).join('');
+  }
   ['p1','p2'].forEach(p=>{
     const el=document.getElementById(`${p}-options`);
     if(!fighters.length){ el.innerHTML=`<div style="color:#666;font-size:13px;padding:10px">No fighters yet!</div>`; return; }
@@ -873,6 +1242,8 @@ function startFight(){
   f1.hp=100; f2.hp=100; f1.power_meter=0; f2.power_meter=0;
   const stageEl = document.getElementById('fight-stage');
   const stageW2 = stageEl.offsetWidth || 700;
+  const stageIdx=parseInt(document.getElementById('stage-select')?.value ?? '-1', 10);
+  applyStage(stageIdx>=0 ? levels[stageIdx] : null);
   fightState={p1:f1,p2:f2,isCPU,round:1,timeLeft:60,active:true,p1Pos:60,p2Pos:stageW2-140};
   document.getElementById('p1-hud-name').textContent=f1.name;
   document.getElementById('p2-hud-name').textContent=f2.name;
@@ -1146,12 +1517,10 @@ async function extractSpriteData(imageBase64, description, personality){
 Extra context about this person: ${description||''} ${personality||''}
 If you cannot see a clear shirt/pants/shoe color, infer from the description or use a reasonable default.`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages',{
+  const resp = await fetch(FIGHTER_API_URL,{
     method:'POST',
     headers:{
-      'Content-Type':'application/json',
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
+      'Content-Type':'application/json'
     },
     body: JSON.stringify({
       model:'claude-sonnet-4-6',
@@ -1185,6 +1554,8 @@ function adjustColor(hex,amt){
 function setupControls(fighter,player,isCPU){
   const moves=fighter.moves||{};
   const btns=document.getElementById(`${player}-moves`);
+  const dpad=document.getElementById(player==='p2'?'p2-dpad':null);
+  if(dpad) dpad.style.display=isCPU?'none':'flex';
   if(isCPU){ btns.innerHTML='<span style="color:#555;font-size:12px">CPU controlled — or connect 2nd gamepad</span>'; return; }
   const list=[
     {k:'light',l:moves.light||'Light',c:''},
