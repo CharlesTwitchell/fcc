@@ -967,6 +967,7 @@ function renderLevels(){
       if(!wrap) return;
       const c=document.createElement('canvas');
       c.width=280; c.height=160; c.style.width='100%'; c.style.height='100%';
+      c.style.imageRendering='pixelated';
       wrap.appendChild(c);
       paintStagePreview(c, lv);
     });
@@ -1062,7 +1063,7 @@ function renderGeneratedLevel(lv){
   document.getElementById('lv-generated-output').innerHTML=`
     <div class="generated-card">
       <div style="text-align:center;margin-bottom:10px;background:#0d0d1a;border-radius:8px;padding:12px;border:1px solid #333">
-        <canvas id="lv-preview-canvas" width="300" height="150" style="width:100%;max-width:300px;border-radius:6px;display:block;margin:0 auto"></canvas>
+        <canvas id="lv-preview-canvas" width="300" height="150" style="width:100%;max-width:300px;border-radius:6px;display:block;margin:0 auto;image-rendering:pixelated"></canvas>
       </div>
       <div style="text-align:center;margin-bottom:8px">
         <div style="font-family:'Black Ops One',cursive;font-size:16px;color:#f5c842">${lv.name}</div>
@@ -1102,6 +1103,35 @@ function mulberry32(seed){
 // is what makes the stage actually look like the picture, rather than an
 // abstract re-imagining of it. Falls back to a procedural sky/silhouette
 // painting (the original approach) when there's no photo to work with.
+// Downscale a photo into a grid of big blocky "pixels" (smoothed average per
+// block), then posterize the color count and scale back up with no smoothing —
+// the standard trick for turning a real photo into retro pixel art.
+function pixelateImage(ctx, img, w, h, blockCount=140, levels=6){
+  const smallW=blockCount, smallH=Math.max(1,Math.round(h*(blockCount/w)));
+  const small=document.createElement('canvas');
+  small.width=smallW; small.height=smallH;
+  const sctx=small.getContext('2d');
+  sctx.imageSmoothingEnabled=true;
+  const scale=Math.max(smallW/img.width, smallH/img.height);
+  const sw=smallW/scale, sh=smallH/scale;
+  const sx=(img.width-sw)/2, sy=(img.height-sh)/2;
+  sctx.drawImage(img, sx, sy, sw, sh, 0, 0, smallW, smallH);
+
+  const imgData=sctx.getImageData(0,0,smallW,smallH);
+  const d=imgData.data;
+  const step=255/(levels-1);
+  for(let i=0;i<d.length;i+=4){
+    d[i]  =Math.round(Math.round(d[i]/step)*step);
+    d[i+1]=Math.round(Math.round(d[i+1]/step)*step);
+    d[i+2]=Math.round(Math.round(d[i+2]/step)*step);
+  }
+  sctx.putImageData(imgData,0,0);
+
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(small, 0, 0, smallW, smallH, 0, 0, w, h);
+  ctx.imageSmoothingEnabled=true;
+}
+
 async function paintStagePreview(canvas, level){
   const w=canvas.width, h=canvas.height;
   const ctx=canvas.getContext('2d');
@@ -1113,10 +1143,7 @@ async function paintStagePreview(canvas, level){
       const img=new Image();
       img.src=level.photo;
       await img.decode();
-      const scale=Math.max(w/img.width, h/img.height);
-      const sw=w/scale, sh=h/scale;
-      const sx=(img.width-sw)/2, sy=(img.height-sh)/2;
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+      pixelateImage(ctx, img, w, h);
 
       // Subtle mood tint from the AI-picked palette, low opacity so the photo still reads clearly
       if(level.silhouette){
@@ -1198,7 +1225,7 @@ function applyStage(level){
   if(!canvas){
     canvas=document.createElement('canvas');
     canvas.id='stage-canvas';
-    canvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;display:none';
+    canvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;display:none;image-rendering:pixelated';
     stage.insertBefore(canvas, stage.firstChild);
   }
   const crowd=stage.querySelector('.stage-crowd');
