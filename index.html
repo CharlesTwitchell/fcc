@@ -722,9 +722,11 @@ function renderRoster(){
 function deleteFighter(i,e){
   e.stopPropagation();
   if(!confirm('Remove this fighter?')) return;
-  fighters.splice(i,1); saveFighters(); renderRoster();
+  const [removed]=fighters.splice(i,1);
+  saveFighters(); renderRoster();
+  if(removed && removed.hasPhoto) deletePhoto(removed.id).catch(()=>{});
 }
-function editFighter(i,e){
+async function editFighter(i,e){
   e.stopPropagation();
   editingIdx=i;
   const f=fighters[i];
@@ -734,7 +736,8 @@ function editFighter(i,e){
   document.getElementById('c-personality').value=f.personality||'';
   document.getElementById('c-appearance').value=f.appearance||'';
   document.getElementById('c-catchphrase').value=f.catchphrase||'';
-  if(f.photo){ uploadedImages=[f.photo]; renderUploadPreviews(); }
+  const photo=f.photo || (f.hasPhoto ? await loadPhoto(f.id).catch(()=>null) : null);
+  if(photo){ uploadedImages=[photo]; renderUploadPreviews(); }
   window._pendingFighter=f;
   document.querySelectorAll('.nav-btn')[1].click();
   renderGeneratedFighter(f);
@@ -939,9 +942,21 @@ function renderGeneratedFighter(f){
   if(canvas) drawSpriteOnCanvas(canvas, f, false);
 }
 
-function saveFighterToRoster(){
+async function saveFighterToRoster(){
   const f=window._pendingFighter;
   if(!f){ alert('Generate a fighter first!'); return; }
+  // Move the photo out of the fighter object and into IndexedDB before it
+  // touches localStorage — embedding it inline risks silently blowing the
+  // shared localStorage quota (and losing whatever else was mid-save).
+  if(f.photo){
+    try{
+      await savePhoto(f.id, f.photo);
+      f.hasPhoto=true;
+    }catch(e){
+      alert('Could not save the fighter photo — saving the fighter without it.');
+    }
+    delete f.photo;
+  }
   if(editingIdx>=0){ fighters[editingIdx]=f; editingIdx=-1; }
   else fighters.push(f);
   saveFighters(); window._pendingFighter=null;
@@ -949,7 +964,9 @@ function saveFighterToRoster(){
   document.querySelectorAll('.nav-btn')[0].click();
 }
 function saveFighters(){
-  try{ localStorage.setItem('fcc_fighters',JSON.stringify(fighters)); }catch(e){}
+  try{ localStorage.setItem('fcc_fighters',JSON.stringify(fighters)); }catch(e){
+    alert('Could not save that fighter — your browser storage may be full. Try removing an old fighter first.');
+  }
 }
 
 // ===== LEVEL/STAGE CREATOR =====
@@ -1013,6 +1030,7 @@ function deleteLevel(i,e){
   const [removed]=levels.splice(i,1);
   saveLevels(); renderLevels();
   if(removed && removed.hasMusic) deleteTrack(removed.id).catch(()=>{});
+  if(removed && removed.hasPhoto) deletePhoto(removed.id).catch(()=>{});
 }
 function saveLevels(){
   try{ localStorage.setItem('fcc_levels',JSON.stringify(levels)); }catch(e){
@@ -1020,45 +1038,58 @@ function saveLevels(){
   }
 }
 
-// ===== LEVEL MUSIC (stored in IndexedDB — audio files are too big for localStorage) =====
+// ===== MEDIA STORAGE (music tracks + photos — too big for localStorage) =====
 let _mediaDbPromise=null;
+// IndexedDB has a far larger quota than localStorage's shared ~5-10MB, so any
+// actual media (audio tracks, photos) lives here — localStorage only keeps
+// lightweight metadata (hasMusic/hasPhoto flags) that fits comfortably.
 function openMediaDB(){
   if(_mediaDbPromise) return _mediaDbPromise;
   _mediaDbPromise=new Promise((resolve,reject)=>{
-    const req=indexedDB.open('fcc_media',1);
-    req.onupgradeneeded=()=>{ req.result.createObjectStore('tracks'); };
+    const req=indexedDB.open('fcc_media',2);
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains('tracks')) db.createObjectStore('tracks');
+      if(!db.objectStoreNames.contains('photos')) db.createObjectStore('photos');
+    };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error);
   });
   return _mediaDbPromise;
 }
-async function saveTrack(id,blob){
+async function dbPut(store,id,value){
   const db=await openMediaDB();
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction('tracks','readwrite');
-    tx.objectStore('tracks').put(blob,id);
+    const tx=db.transaction(store,'readwrite');
+    tx.objectStore(store).put(value,id);
     tx.oncomplete=()=>resolve();
     tx.onerror=()=>reject(tx.error);
   });
 }
-async function loadTrack(id){
+async function dbGet(store,id){
   const db=await openMediaDB();
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction('tracks','readonly');
-    const req=tx.objectStore('tracks').get(id);
+    const tx=db.transaction(store,'readonly');
+    const req=tx.objectStore(store).get(id);
     req.onsuccess=()=>resolve(req.result||null);
     req.onerror=()=>reject(req.error);
   });
 }
-async function deleteTrack(id){
+async function dbDelete(store,id){
   const db=await openMediaDB();
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction('tracks','readwrite');
-    tx.objectStore('tracks').delete(id);
+    const tx=db.transaction(store,'readwrite');
+    tx.objectStore(store).delete(id);
     tx.oncomplete=()=>resolve();
     tx.onerror=()=>reject(tx.error);
   });
 }
+const saveTrack=(id,blob)=>dbPut('tracks',id,blob);
+const loadTrack=(id)=>dbGet('tracks',id);
+const deleteTrack=(id)=>dbDelete('tracks',id);
+const savePhoto=(id,dataUrl)=>dbPut('photos',id,dataUrl);
+const loadPhoto=(id)=>dbGet('photos',id);
+const deletePhoto=(id)=>dbDelete('photos',id);
 
 function handleLevelMusicUpload(e){
   const file=e.target.files[0];
@@ -1178,6 +1209,18 @@ async function saveLevelFromPending(){
       alert('Could not save the music track — saving the stage without it.');
     }
   }
+  // Move the photo out of the level object and into IndexedDB before it ever
+  // touches localStorage — embedding it inline is what silently blew the
+  // localStorage quota (and lost whatever else was mid-save) before.
+  if(lv.photo){
+    try{
+      await savePhoto(lv.id, lv.photo);
+      lv.hasPhoto=true;
+    }catch(e){
+      alert('Could not save the stage photo — saving the stage without it.');
+    }
+    delete lv.photo;
+  }
   levels.push(lv); saveLevels(); window._pendingLevel=null;
   uploadedLevelMusic=null;
   alert(`${lv.name} added! 🏟️`);
@@ -1237,10 +1280,13 @@ async function paintStagePreview(canvas, level){
   ctx.clearRect(0,0,w,h);
   if(!level) return;
 
-  if(level.photo){
+  // A not-yet-saved level still carries .photo directly (in-memory only); a
+  // saved one only has hasPhoto and needs an async lookup from IndexedDB.
+  const photoSrc=level.photo || (level.hasPhoto ? await loadPhoto(level.id).catch(()=>null) : null);
+  if(photoSrc){
     try{
       const img=new Image();
-      img.src=level.photo;
+      img.src=photoSrc;
       await img.decode();
       pixelateImage(ctx, img, w, h);
 
@@ -2484,7 +2530,7 @@ function showResultScreen(winner){
     <div class="fight-arena" style="text-align:center;padding:24px">
       ${isChuckles?`<div style="font-family:'Black Ops One',cursive;font-size:13px;color:#e63946;letter-spacing:3px;margin-bottom:6px;text-shadow:0 0 10px #e63946">FATALITY</div>`:''}
       <div style="font-family:'Black Ops One',cursive;font-size:13px;color:#e63946;letter-spacing:3px;margin-bottom:10px">WINNER</div>
-      <div style="margin-bottom:10px">${winner.photo?`<img src="${winner.photo}" style="width:90px;height:90px;border-radius:50%;border:4px solid #f5c842;object-fit:cover">`:`<span style="font-size:64px">${winner.emoji||'🏆'}</span>`}</div>
+      <div style="margin-bottom:10px" id="winner-photo-slot">${winner.photo?`<img src="${winner.photo}" style="width:90px;height:90px;border-radius:50%;border:4px solid #f5c842;object-fit:cover">`:`<span style="font-size:64px">${winner.emoji||'🏆'}</span>`}</div>
       <div style="font-family:'Black Ops One',cursive;font-size:28px;color:#f5c842">${winner.name}</div>
       <div style="font-size:12px;color:#e63946;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">${winner.title||''}</div>
       <div style="font-size:14px;color:#aaa;font-style:italic;margin-bottom:4px">"${isChuckles?'That\'s a birdie!':(winner.winQuote||'Victory is mine!')}"</div>
@@ -2494,6 +2540,12 @@ function showResultScreen(winner){
         <button class="btn btn-outline" onclick="endFight()">Character Select</button>
       </div>
     </div>`;
+  if(winner.hasPhoto){
+    loadPhoto(winner.id).then(photo=>{
+      const slot=document.getElementById('winner-photo-slot');
+      if(photo && slot) slot.innerHTML=`<img src="${photo}" style="width:90px;height:90px;border-radius:50%;border:4px solid #f5c842;object-fit:cover">`;
+    }).catch(()=>{});
+  }
 }
 function addLog(msg,cls=''){
   const log=document.getElementById('battle-log');
