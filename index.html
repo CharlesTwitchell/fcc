@@ -334,6 +334,8 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
           <textarea id="c-appearance" placeholder="e.g. Has a beard, wears glasses, super tall, always wears red sneakers..."></textarea>
           <label>Signature Catchphrase (optional)</label>
           <input type="text" id="c-catchphrase" placeholder="e.g. 'You just got WRECKED!'">
+          <label>Finishing Move (optional)</label>
+          <textarea id="c-finisher" placeholder="e.g. He slams both fists into the ground, creating a shockwave that launches everyone into the air..."></textarea>
           <button class="btn btn-primary" style="width:100%" onclick="generateFighter()">⚡ Generate Fighter with AI</button>
         </div>
       </div>
@@ -736,6 +738,7 @@ async function editFighter(i,e){
   document.getElementById('c-personality').value=f.personality||'';
   document.getElementById('c-appearance').value=f.appearance||'';
   document.getElementById('c-catchphrase').value=f.catchphrase||'';
+  document.getElementById('c-finisher').value=f.finisherDesc||'';
   const photo=f.photo || (f.hasPhoto ? await loadPhoto(f.id).catch(()=>null) : null);
   if(photo){ uploadedImages=[photo]; renderUploadPreviews(); }
   window._pendingFighter=f;
@@ -750,6 +753,7 @@ function resetCreator(){
   document.getElementById('c-personality').value='';
   document.getElementById('c-appearance').value='';
   document.getElementById('c-catchphrase').value='';
+  document.getElementById('c-finisher').value='';
   uploadedImages=[]; document.getElementById('upload-preview').innerHTML='';
   document.getElementById('generated-output').innerHTML=`<div class="empty-state" style="padding:30px"><div style="font-size:40px;margin-bottom:8px">🥊</div><h3>Ready to Create</h3><p style="font-size:13px">Fill in the details and hit Generate</p></div>`;
 }
@@ -794,6 +798,7 @@ async function generateFighter(){
   const personality=document.getElementById('c-personality').value.trim();
   const appearance=document.getElementById('c-appearance').value.trim();
   const catchphrase=document.getElementById('c-catchphrase').value.trim();
+  const finisherDesc=document.getElementById('c-finisher').value.trim();
   if(!name){ alert('Give your fighter a name!'); return; }
   if(!personality&&!appearance){ alert('Add some personality or appearance details!'); return; }
 
@@ -806,6 +811,7 @@ Fighting Style: ${style}
 Personality: ${personality||'Not specified'}
 Appearance/Traits: ${appearance||'Not specified'}
 Catchphrase: ${catchphrase||'None'}
+Finishing move idea: ${finisherDesc||'Not specified — invent one that fits their personality and fighting style'}
 ${uploadedImages.length>0?'Reference photo provided.':''}
 
 Return ONLY a valid JSON object, no markdown, no backticks:
@@ -826,7 +832,12 @@ Return ONLY a valid JSON object, no markdown, no backticks:
   },
   "taunts": ["trash talk line 1", "trash talk line 2", "trash talk line 3"],
   "winQuote": "short victory quote",
-  "appearance": "2 sentences describing in-game fighter look blending real traits into stylized form"
+  "appearance": "2 sentences describing in-game fighter look blending real traits into stylized form",
+  "finishingMove": {
+    "name": "2-4 word dramatic finishing move name, based on the finishing move idea above",
+    "quote": "a short punchy battlecry (3-8 words) the character shouts while performing it",
+    "description": "1 dramatic sentence describing how the finishing move looks/plays out"
+  }
 }`;
 
   try{
@@ -870,7 +881,7 @@ Return ONLY a valid JSON object, no markdown, no backticks:
     if(jsonStart>-1&&jsonEnd>-1) text=text.slice(jsonStart,jsonEnd+1);
     const f=JSON.parse(text);
     f.style=style; f.personality=personality; f.appearance=appearance;
-    f.catchphrase=catchphrase; f.realname=realname;
+    f.catchphrase=catchphrase; f.realname=realname; f.finisherDesc=finisherDesc;
     f.photo=uploadedImages[0]||null;
     f.spriteData=spriteData;
     f.id=Date.now(); f.hp=100;
@@ -932,6 +943,12 @@ function renderGeneratedFighter(f){
       <div style="margin-top:8px;margin-bottom:4px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px">Moves</div>
       <div>${f.moves?Object.values(f.moves).map(v=>`<span class="move-tag">${v}</span>`).join(''):''}</div>
       ${f.catchphrase?`<div style="margin-top:8px;font-size:12px;color:#f5c842;text-align:center">"${f.catchphrase}"</div>`:''}
+      ${f.finishingMove?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid #333;text-align:center">
+        <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Finishing Move</div>
+        <div style="font-family:'Black Ops One',cursive;font-size:14px;color:#e63946">${f.finishingMove.name}</div>
+        <div style="font-size:12px;color:#aaa;font-style:italic;margin-top:2px">"${f.finishingMove.quote||''}"</div>
+        <div style="font-size:11px;color:#666;margin-top:4px">${f.finishingMove.description||''}</div>
+      </div>`:''}
       <div style="display:flex;gap:6px;margin-top:12px">
         <button class="btn btn-gold" style="flex:1" onclick="saveFighterToRoster()">Save to Roster</button>
         <button class="btn btn-outline btn-sm" onclick="generateFighter()">Regen</button>
@@ -2217,14 +2234,30 @@ function checkKO(){
     if(lCanvas) drawAnimFrame(lCanvas, fightState[loser], loser==='p2', 'ko', 0);
     const w=fightState.p1.hp>0?fightState.p1:fightState.p2;
 
-    speak('Finish them');
     const finishEl=document.getElementById('finish-overlay');
-    finishEl.classList.add('show');
-    setTimeout(()=>{
+    const flash=(text,speech,onDone)=>{
+      // Force a reflow before re-adding 'show' so back-to-back flashes each
+      // restart the CSS animation instead of silently no-oping.
       finishEl.classList.remove('show');
-      document.getElementById('ko-overlay').style.display='block';
-      setTimeout(()=>showResult(w),1600);
-    },1200);
+      void finishEl.offsetWidth;
+      finishEl.textContent=text;
+      speak(speech);
+      finishEl.classList.add('show');
+      setTimeout(()=>{ finishEl.classList.remove('show'); onDone(); },1200);
+    };
+
+    flash('FINISH THEM','Finish them',()=>{
+      const proceedToKO=()=>{
+        document.getElementById('ko-overlay').style.display='block';
+        setTimeout(()=>showResult(w),1600);
+      };
+      const finisher=w.finishingMove;
+      if(finisher && finisher.name){
+        flash(finisher.name.toUpperCase(), finisher.quote||finisher.name, proceedToKO);
+      } else {
+        proceedToKO();
+      }
+    });
   }
 }
 function fightTick(){
