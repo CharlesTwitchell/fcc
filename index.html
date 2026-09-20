@@ -150,6 +150,18 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
   text-shadow:4px 4px 0 #e63946,-2px -2px 0 #e63946;display:none;white-space:nowrap;z-index:10;
   animation:koFlash .3s ease infinite alternate}
 @keyframes koFlash{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.05)}}
+.finish-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.5);
+  font-family:'Black Ops One',cursive;font-size:34px;color:#e63946;letter-spacing:2px;
+  text-shadow:3px 3px 0 #0a0a0a,-1px -1px 0 #f5c842;display:none;white-space:nowrap;z-index:11;
+  opacity:0}
+.finish-overlay.show{display:block;animation:finishFlash 1.1s ease-out forwards}
+@keyframes finishFlash{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(0.4)}
+  15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}
+  25%{transform:translate(-50%,-50%) scale(1)}
+  80%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.05)}
+}
 .power-meter{height:8px;background:#333;border-radius:4px;overflow:hidden;margin-top:4px}
 .power-fill{height:100%;background:linear-gradient(90deg,#457b9d,#f5c842);border-radius:4px;transition:width .3s}
 .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
@@ -426,6 +438,7 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
           </div>
           <div class="stage-floor"></div>
           <div class="ko-overlay" id="ko-overlay">K.O.!</div>
+          <div class="finish-overlay" id="finish-overlay">FINISH THEM</div>
           <div class="attack-flash" id="attack-flash"></div>
         </div>
 
@@ -1317,6 +1330,8 @@ function startFight(){
   document.getElementById('p2-ctrl-name').textContent=(isCPU?'CPU: ':'')+f2.name;
   document.getElementById('battle-log').innerHTML='<span style="color:#f5c842">⚔️ FIGHT!</span>';
   document.getElementById('ko-overlay').style.display='none';
+  document.getElementById('finish-overlay').classList.remove('show');
+  try{ speechSynthesis.cancel(); }catch(e){}
   updateHealthBars();
   if(fightTimer) clearInterval(fightTimer);
   fightTimer=setInterval(fightTick,1000);
@@ -2014,6 +2029,17 @@ function updateHealthBars(){
     document.getElementById(`${p}-power-bar`).style.width=Math.round(f.power_meter||0)+'%';
   });
 }
+// Speak a line via the browser's built-in text-to-speech (no server/API needed)
+function speak(text){
+  try{
+    if(!window.speechSynthesis) return;
+    speechSynthesis.cancel(); // don't stack queued lines from a fast double-KO or replay
+    const u=new SpeechSynthesisUtterance(text);
+    u.rate=0.85; u.pitch=0.6; u.volume=1;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
 function checkKO(){
   if(fightState.p1.hp<=0||fightState.p2.hp<=0){
     fightState.active=false;
@@ -2023,9 +2049,16 @@ function checkKO(){
     animState.p1.anim='ko'; animState.p2.anim='ko';
     const lCanvas=getCanvas(loser);
     if(lCanvas) drawAnimFrame(lCanvas, fightState[loser], loser==='p2', 'ko', 0);
-    document.getElementById('ko-overlay').style.display='block';
     const w=fightState.p1.hp>0?fightState.p1:fightState.p2;
-    setTimeout(()=>showResult(w),1600);
+
+    speak('Finish them');
+    const finishEl=document.getElementById('finish-overlay');
+    finishEl.classList.add('show');
+    setTimeout(()=>{
+      finishEl.classList.remove('show');
+      document.getElementById('ko-overlay').style.display='block';
+      setTimeout(()=>showResult(w),1600);
+    },1200);
   }
 }
 function fightTick(){
