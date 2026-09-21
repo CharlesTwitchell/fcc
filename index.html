@@ -1291,6 +1291,34 @@ function pixelateImage(ctx, img, w, h, blockCount=220, levels=8){
   ctx.imageSmoothingEnabled=true;
 }
 
+// Downscale a photo into a small block grid matching the sprite's own pixel
+// density (not the photo's native detail) — used to draw a recognizable,
+// in-style pixelated face on the fighter sprite instead of a flat color fill.
+function pixelateFaceBlocks(img, blocksW, blocksH){
+  const small=document.createElement('canvas');
+  small.width=blocksW; small.height=blocksH;
+  const sctx=small.getContext('2d');
+  sctx.imageSmoothingEnabled=true;
+  const scale=Math.max(blocksW/img.width, blocksH/img.height);
+  const sw=blocksW/scale, sh=blocksH/scale;
+  sctx.drawImage(img, (img.width-sw)/2, (img.height-sh)/2, sw, sh, 0, 0, blocksW, blocksH);
+  return small;
+}
+// Cache of pre-pixelated face canvases keyed by fighter id — computed once
+// (async photo load) rather than on every animation frame.
+const faceCache={};
+async function prepareFighterFace(fighter){
+  if(!fighter || faceCache[fighter.id]!==undefined) return;
+  const photoSrc=fighter.photo || (fighter.hasPhoto ? await loadPhoto(fighter.id).catch(()=>null) : null);
+  if(!photoSrc){ faceCache[fighter.id]=null; return; }
+  try{
+    const img=new Image();
+    img.src=photoSrc;
+    await img.decode();
+    faceCache[fighter.id]=pixelateFaceBlocks(img,11,8);
+  }catch(e){ faceCache[fighter.id]=null; }
+}
+
 async function paintStagePreview(canvas, level){
   const w=canvas.width, h=canvas.height;
   const ctx=canvas.getContext('2d');
@@ -1503,6 +1531,7 @@ function startFight(){
   document.getElementById('p2-hud-name').textContent=f2.name;
   document.getElementById('round-num').textContent='1';
   renderSprite('p1',f1,false); renderSprite('p2',f2,true);
+  prepareFighterFace(f1); prepareFighterFace(f2);
   document.getElementById('name-p1').textContent=f1.name;
   document.getElementById('name-p2').textContent=f2.name;
   const stageW = document.getElementById('fight-stage').offsetWidth || 700;
@@ -1701,7 +1730,7 @@ function buildSpriteGrid(sd, flip){
   return rows.slice(0,SH);
 }
 
-function drawSpriteOnCanvas(canvas, fighter, flip){
+async function drawSpriteOnCanvas(canvas, fighter, flip){
   const sd = fighter.spriteData || {};
   const palette = buildPalette({
     skinTone: sd.skinTone||'#c8a882',
@@ -1739,6 +1768,13 @@ function drawSpriteOnCanvas(canvas, fighter, flip){
       ctx.fillStyle = color;
       ctx.fillRect(col*PIXEL_SCALE, row*PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
     }
+  }
+
+  await prepareFighterFace(fighter);
+  const faceImg=faceCache[fighter.id];
+  if(faceImg){
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(faceImg,0,0,11,8,5*PIXEL_SCALE,2*PIXEL_SCALE,13*PIXEL_SCALE,8*PIXEL_SCALE);
   }
 }
 
@@ -1996,15 +2032,23 @@ function drawAnimFrame(canvas, fighter, flip, animName, t){
 
   // HEAD
   const hx=7+lean+headTilt, hy=0+bY;
+  const faceImg=faceCache[fighter.id];
   px(hx,hy+2,10,8,C.SK);
-  px(hx+1,hy+1,8,1,C.SK); px(hx+1,hy+9,8,1,C.SK2);
+  if(faceImg){
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(faceImg,0,0,11,8,Math.round((hx-1)*P),Math.round((hy+2)*P),11*P,8*P);
+  } else {
+    px(hx+1,hy+1,8,1,C.SK); px(hx+1,hy+9,8,1,C.SK2);
+  }
   // Hair
   px(hx,hy,10,3,C.HA); px(hx+1,hy,8,2,C.HA2);
-  // Eyes
+  // Eyes — skip the flat drawn eyes when a photo face is present (it has its own)
   const eyeY=hy+4;
-  px(hx+2,eyeY,2,2,C.EY); px(hx+6,eyeY,2,2,C.EY);
-  px(hx+2,eyeY,2,1,'rgba(255,255,255,0.4)');
-  px(hx+6,eyeY,2,1,'rgba(255,255,255,0.4)');
+  if(!faceImg){
+    px(hx+2,eyeY,2,2,C.EY); px(hx+6,eyeY,2,2,C.EY);
+    px(hx+2,eyeY,2,1,'rgba(255,255,255,0.4)');
+    px(hx+6,eyeY,2,1,'rgba(255,255,255,0.4)');
+  }
   // Outline
   px(hx-1,hy+2,1,8,C.OU); px(hx+10,hy+2,1,8,C.OU);
   px(hx,hy+10,10,1,C.OU);
