@@ -354,6 +354,17 @@ input[type=color]{width:100%;height:36px;background:#0d0d0d;border:1px solid #44
               </select>
             </div>
             <div>
+              <label>Weapon</label>
+              <select id="c-weapon">
+                <option value="none" selected>None</option>
+                <option value="sword">Sword</option>
+                <option value="knife">Knife</option>
+                <option value="bat">Bat</option>
+                <option value="axe">Axe</option>
+                <option value="bo">Bo Staff</option>
+              </select>
+            </div>
+            <div>
               <label>Hair Length</label>
               <select id="c-hairlength">
                 <option value="short" selected>Short</option>
@@ -785,30 +796,16 @@ function renderRoster(){
         <button class="btn btn-danger btn-sm" onclick="deleteFighter(${i},event)">✕</button>
       </div>`;
     grid.appendChild(card);
-    // Draw mini pixel sprite into avatar
+    // Draw mini sprite into avatar — same renderer as fights, so it never goes stale
     requestAnimationFrame(()=>{
       const wrap=document.getElementById(`roster-avatar-${i}`);
       if(!wrap) return;
       const c=document.createElement('canvas');
       c.style.imageRendering='pixelated';
-      c.style.imageRendering='crisp-edges';
       c.style.width='100%'; c.style.height='100%';
       wrap.appendChild(c);
-      // Mini sprite: scale 2
-      const miniScale=2;
-      c.width=SW*miniScale; c.height=SH*miniScale;
-      const ctx=c.getContext('2d');
-      ctx.imageSmoothingEnabled=false;
-      const palette=buildPalette(Object.assign({sigColor:f.color||'#e63946'},f.spriteData||{}));
-      const grid2=buildSpriteGrid(f.spriteData||{},false);
-      for(let row=0;row<SH;row++) for(let col=0;col<SW;col++){
-        const key=grid2[row]?grid2[row][col]:'T';
-        if(!key||key==='T') continue;
-        const color=palette[key]||palette['SK'];
-        if(!color||color.includes('0000')) continue;
-        ctx.fillStyle=color;
-        ctx.fillRect(col*miniScale,row*miniScale,miniScale,miniScale);
-      }
+      drawAnimFrame(c, f, false, 'idle', 1.5);
+      prepareFighterFace(f).then(()=>drawAnimFrame(c, f, false, 'idle', 1.5));
     });
     grid.appendChild(card);
   });
@@ -840,6 +837,7 @@ async function editFighter(i,e){
   const sd=f.spriteData||{};
   document.getElementById('c-build').value=sd.build||'medium';
   document.getElementById('c-sleeve').value=sd.sleeveStyle||'long';
+  document.getElementById('c-weapon').value=sd.weapon||'none';
   document.getElementById('c-hairlength').value=sd.hairLength||'short';
   document.getElementById('c-skintone').value=sd.skinTone||'#c8a882';
   document.getElementById('c-haircolor').value=sd.hairColor||'#2a1a0a';
@@ -868,6 +866,7 @@ function resetCreator(){
   document.getElementById('c-finisher').value='';
   document.getElementById('c-build').value='medium';
   document.getElementById('c-sleeve').value='long';
+  document.getElementById('c-weapon').value='none';
   document.getElementById('c-hairlength').value='short';
   document.getElementById('c-skintone').value='#c8a882';
   document.getElementById('c-haircolor').value='#2a1a0a';
@@ -939,6 +938,7 @@ async function generateFighter(){
     shoeColor:document.getElementById('c-shoecolor').value,
     build:document.getElementById('c-build').value,
     sleeveStyle:document.getElementById('c-sleeve').value,
+    weapon:document.getElementById('c-weapon').value,
     beard:document.getElementById('c-beard').checked,
     glasses:document.getElementById('c-glasses').checked,
     cape:document.getElementById('c-cape').checked,
@@ -1590,16 +1590,9 @@ function renderFightSetup(){
         if(!wrap) return;
         const c=document.createElement('canvas');
         c.style.imageRendering='pixelated'; c.style.width='100%'; c.style.height='100%';
-        const ms=1; c.width=SW*ms; c.height=SH*ms;
         wrap.appendChild(c);
-        const ctx=c.getContext('2d'); ctx.imageSmoothingEnabled=false;
-        const palette=buildPalette(Object.assign({sigColor:f.color||'#e63946'},f.spriteData||{}));
-        const g=buildSpriteGrid(f.spriteData||{},false);
-        for(let r=0;r<SH;r++) for(let col=0;col<SW;col++){
-          const key=g[r]?g[r][col]:'T'; if(!key||key==='T') continue;
-          const color=palette[key]||palette['SK']; if(!color||color.includes('0000')) continue;
-          ctx.fillStyle=color; ctx.fillRect(col*ms,r*ms,ms,ms);
-        }
+        drawAnimFrame(c, f, false, 'idle', 1.5);
+        prepareFighterFace(f).then(()=>drawAnimFrame(c, f, false, 'idle', 1.5));
       });
     });
   });
@@ -1721,117 +1714,6 @@ function buildPalette(sd){
     EY: eye,
     OU: '#0a0a0a',           // outline
   };
-}
-
-// 24×40 SNES fighter sprite template — each char maps to palette key
-// Reading top→bottom, left→right. T=transparent
-function buildSpriteGrid(sd, flip){
-  // Choose hair style rows based on hairLength
-  const longHair = (sd.hairLength||'short')==='long';
-  const beard = sd.beard||false;
-  const glasses = sd.glasses||false;
-  const heavyBuild = (sd.build||'medium')==='heavy';
-
-  // 24 wide, 40 tall — SNES fighter silhouette
-  // Uses palette keys: T,SK,SK2,SK3,HA,HA2,SH,SH2,SH3,PA,PA2,BL,SO,SO2,EY,OU
-  const G=[
-  // Row 0-1: hair top
-  'TTTTTTTTTTTTTTTTTTTTTTT T',
-  'TTTTTTTT HAHAAHAHAHAHAH TTTTTT',
-  // Row 2-4: hair/head top
-  'TTTTTTT OUHAHAAHAHAHAHAOU TTTTT'.substring(0,24),
-  'TTTTTT OUHAHAAHAHAHAHAOU TTTTT'.substring(0,24),
-  'TTTTTT OUSKSK3SK3SK3SKSKOu TTTT'.substring(0,24),
-  ];
-
-  // Programmatic approach — build rows as arrays
-  const rows=[];
-  // Helper: pad row to 24
-  const R=(arr)=>{ while(arr.length<24) arr.push('T'); return arr.slice(0,24); };
-
-  // --- HEAD (rows 0-10) ---
-  // Hair rows 0-2
-  rows.push(R(['T','T','T','T','T','T','T','T','HA','HA','HA','HA','HA','HA','HA','HA','T','T','T','T','T','T','T','T']));
-  rows.push(R(['T','T','T','T','T','T','OU','HA','HA','HA2','HA2','HA','HA','HA2','HA','HA','OU','T','T','T','T','T','T','T']));
-  rows.push(R(['T','T','T','T','T','OU','HA','HA','HA2','HA2','HA','HA','HA','HA','HA2','HA','HA','OU','T','T','T','T','T','T']));
-  // Head sides row 3
-  rows.push(R(['T','T','T','T','OU','SK','SK','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK','SK','OU','T','T','T','T','T','T']));
-  // Face rows 4-8
-  rows.push(R(['T','T','T','OU','SK2','SK','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK3','SK','SK2','OU','T','T','T','T','T']));
-  // Eyes row 5
-  const eyeRow=glasses
-    ?['T','T','OU','SK','SK','OU','EY','SK3','OU','SK','SK','SK','SK','OU','SK3','EY','OU','SK','SK','OU','T','T','T','T']
-    :['T','T','OU','SK','SK','SK','EY','EY','SK','SK','SK','SK','SK','SK','EY','EY','SK','SK','SK','OU','T','T','T','T'];
-  rows.push(R(eyeRow));
-  rows.push(R(['T','T','OU','SK','SK2','SK','SK','SK','SK2','SK','SK','SK','SK','SK','SK','SK','SK','SK2','SK','OU','T','T','T','T']));
-  // Nose row
-  rows.push(R(['T','T','OU','SK','SK2','SK','SK','SK2','SK2','SK','SK','SK','SK','SK2','SK2','SK','SK','SK2','SK','OU','T','T','T','T']));
-  // Mouth row — beard or plain
-  const mouthRow=beard
-    ?['T','T','OU','SK','HA','HA','HA','HA2','HA2','HA2','HA','HA','HA2','HA2','HA2','HA','HA','HA','SK','OU','T','T','T','T']
-    :['T','T','OU','SK','SK2','SK','SK','SK2','SK','SK','SK2','SK2','SK','SK','SK2','SK','SK','SK2','SK','OU','T','T','T','T'];
-  rows.push(R(mouthRow));
-  // Chin
-  rows.push(R(['T','T','T','OU','SK','SK2','SK','SK','SK2','SK','SK','SK','SK','SK','SK','SK','SK2','SK','OU','T','T','T','T','T']));
-  // Long hair sides
-  if(longHair){
-    rows.push(R(['T','T','HA','HA','OU','SK2','SK','SK','SK','SK','SK','SK','SK','SK','SK','SK','SK2','OU','HA','HA','T','T','T','T']));
-  } else {
-    rows.push(R(['T','T','T','OU','SK2','SK','SK','SK','SK','SK','SK','SK','SK','SK','SK','SK','SK2','OU','T','T','T','T','T','T']));
-  }
-  // --- NECK row 11 ---
-  rows.push(R(['T','T','T','T','T','OU','SK','SK2','SK','SK','SK','SK','SK','SK','SK2','SK','OU','T','T','T','T','T','T','T']));
-  // --- SHOULDERS row 12 ---
-  rows.push(R(['T','T','OU','SH3','SH','SH','SH','SH2','SH','SH','SH','SH','SH','SH','SH2','SH','SH','SH','SH3','OU','T','T','T','T']));
-  // --- UPPER ARMS + CHEST rows 13-19 ---
-  rows.push(R(['T','OU','SH2','SK','SK','SH','SH3','SH','SH','SH','SH','SH','SH','SH','SH','SH3','SH','SH','SK','SK','SH2','OU','T','T']));
-  rows.push(R(['OU','SK','SK2','SK','SH2','SH','SH3','SH2','SH','SH','SH','SH','SH','SH','SH2','SH3','SH','SH2','SH','SK2','SK','SK','OU','T']));
-  rows.push(R(['OU','SK','SK2','SK','SH2','SH','SH','SH2','SH','SH2','SH','SH','SH2','SH','SH2','SH','SH','SH2','SH','SK2','SK','SK','OU','T']));
-  rows.push(R(['OU','SK','SK2','SK2','SH2','SH3','SH','SH','SH','SH','SH','SH','SH','SH','SH','SH','SH3','SH2','SH','SK2','SK2','SK','OU','T']));
-  rows.push(R(['T','OU','SK2','SK2','SH2','SH','SH','SH2','BL','BL','BL','BL','BL','BL','SH2','SH','SH','SH2','SH','SK2','SK2','OU','T','T']));
-  rows.push(R(['T','OU','SK2','SK2','SH2','SH','SH','SH2','SH','SH','SH','SH','SH','SH','SH2','SH','SH','SH2','SH','SK2','SK2','OU','T','T']));
-  rows.push(R(['T','T','OU','SK2','SH2','SH','SH3','SH','SH','SH','SH','SH','SH','SH','SH','SH3','SH','SH2','SH','SK2','OU','T','T','T']));
-  // --- BELT row 20 ---
-  rows.push(R(['T','T','T','OU','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','BL','OU','T','T','T','T']));
-  // --- HIPS row 21 ---
-  const hipW = heavyBuild ? 20 : 16;
-  const hipOff = Math.floor((24-hipW)/2);
-  const hipRow=Array(24).fill('T');
-  hipRow[hipOff]='OU'; hipRow[hipOff+hipW-1]='OU';
-  for(let i=hipOff+1;i<hipOff+hipW-1;i++) hipRow[i]=(i<hipOff+Math.floor(hipW/2))?'PA':'PA2';
-  rows.push(R(hipRow));
-  // --- THIGHS rows 22-26 ---
-  for(let r=0;r<5;r++){
-    const row=Array(24).fill('T');
-    const lx=4+(r>2?1:0), rx=17-(r>2?1:0);
-    row[lx]='OU'; row[lx+1]='PA'; row[lx+2]='PA'; row[lx+3]='PA2'; row[lx+4]='OU';
-    row[rx-4]='OU'; row[rx-3]='PA2'; row[rx-2]='PA'; row[rx-1]='PA'; row[rx]='OU';
-    rows.push(R(row));
-  }
-  // --- KNEES row 27 ---
-  rows.push(R(['T','T','T','T','OU','PA','PA2','PA','OU','T','T','T','T','T','OU','PA','PA2','PA','OU','T','T','T','T','T']));
-  // --- SHINS rows 28-33 ---
-  for(let r=0;r<6;r++){
-    const row=Array(24).fill('T');
-    row[4]='OU'; row[5]='PA'; row[6]='PA2'; row[7]='PA'; row[8]='OU';
-    row[15]='OU'; row[16]='PA'; row[17]='PA2'; row[18]='PA'; row[19]='OU';
-    rows.push(R(row));
-  }
-  // --- ANKLES row 34 ---
-  rows.push(R(['T','T','T','T','OU','SO2','SO','SO2','OU','T','T','T','T','T','OU','SO2','SO','SO2','OU','T','T','T','T','T']));
-  // --- FEET rows 35-39 ---
-  for(let r=0;r<5;r++){
-    const row=Array(24).fill('T');
-    const spread=r*1;
-    const lStart=3-Math.floor(spread/2), rStart=14+Math.floor(spread/2);
-    for(let i=lStart;i<lStart+7;i++) row[Math.max(0,Math.min(23,i))]=i===lStart||i===lStart+6?'OU':(i<lStart+3?'SO2':'SO');
-    for(let i=rStart;i<rStart+7;i++) row[Math.max(0,Math.min(23,i))]=i===rStart||i===rStart+6?'OU':(i<rStart+3?'SO2':'SO');
-    rows.push(R(row));
-  }
-
-  // Ensure exactly SH rows
-  while(rows.length<SH) rows.push(Array(SW).fill('T'));
-  return rows.slice(0,SH);
 }
 
 function renderSprite(player, fighter, flip){
@@ -2049,7 +1931,7 @@ function drawAnimFrame(canvas, fighter, flip, animName, t){
   // LEFT ARM (punching arm when rArmAngle != 0)
   drawArm(ctx,P,C, 4+lean, 13+bY, lArmAngle, lArmExtend, false, sig, sd.sleeveStyle);
   // RIGHT ARM
-  drawArm(ctx,P,C, 19+lean, 13+bY, rArmAngle, rArmExtend, true, sig, sd.sleeveStyle);
+  drawArm(ctx,P,C, 19+lean, 13+bY, rArmAngle, rArmExtend, true, sig, sd.sleeveStyle, sd.weapon);
 
   // NECK
   px(10+lean+headTilt,9+bY,4,3,C.SK);
@@ -2101,7 +1983,7 @@ function drawAnimFrame(canvas, fighter, flip, animName, t){
   }
 }
 
-function drawArm(ctx,P,C, baseX,baseY, angle, extend, isRight, sigColor, sleeveStyle){
+function drawArm(ctx,P,C, baseX,baseY, angle, extend, isRight, sigColor, sleeveStyle, weapon){
   // angle: 0=hanging down, negative=raised/punching forward, positive=down-kick
   const len=6+extend;
   const rad=angle*(Math.PI/180);
@@ -2130,6 +2012,41 @@ function drawArm(ctx,P,C, baseX,baseY, angle, extend, isRight, sigColor, sleeveS
   // Fist/glove
   ctx.fillStyle=C.SH3;
   ctx.fillRect(Math.round((baseX+dx*0.95)*P)-P, Math.round((baseY+dy*0.95)*P)-P, P*3, P*3);
+
+  // Weapon, gripped in the fist, extending along the same direction as the arm
+  if(isRight && weapon && weapon!=='none'){
+    const armLen=Math.hypot(dx,dy)||1;
+    drawWeapon(ctx,P, baseX+dx*0.95, baseY+dy*0.95, dx/armLen, dy/armLen, weapon);
+  }
+}
+
+function drawWeapon(ctx,P, fistX,fistY, ux,uy, weapon){
+  const wpx=(x,y,w,h,col)=>{
+    ctx.fillStyle=col;
+    ctx.fillRect(Math.round(x*P),Math.round(y*P),Math.round(w*P),Math.round(h*P));
+  };
+  const steel='#c8ccd0', steelDark='#888e94', wood='#7a4a2a', woodDark='#5a3418', grip='#3a2414';
+
+  if(weapon==='sword'){
+    wpx(fistX-0.5,fistY-0.5,1,1,grip);
+    for(let t=1;t<=5;t++) wpx(fistX+ux*t-0.5,fistY+uy*t-0.5,1,1,t===5?steelDark:steel);
+    wpx(fistX+ux*1-uy*1.2-0.5,fistY+uy*1+ux*1.2-0.5,1,1,steelDark);
+    wpx(fistX+ux*1+uy*1.2-0.5,fistY+uy*1-ux*1.2-0.5,1,1,steelDark);
+  } else if(weapon==='knife'){
+    wpx(fistX-0.5,fistY-0.5,1,1,grip);
+    wpx(fistX+ux-0.5,fistY+uy-0.5,1,1,steel);
+    wpx(fistX+ux*2-0.5,fistY+uy*2-0.5,1,1,steel);
+  } else if(weapon==='bat'){
+    for(let t=1;t<=5;t++){
+      const w=0.6+t*0.25;
+      wpx(fistX+ux*t-w/2,fistY+uy*t-w/2,w,w,wood);
+    }
+  } else if(weapon==='axe'){
+    for(let t=1;t<=3.5;t+=0.7) wpx(fistX+ux*t-0.5,fistY+uy*t-0.5,1,1,wood);
+    wpx(fistX+ux*3.8-uy*1.3-1,fistY+uy*3.8+ux*1.3-1,2.5,2.5,steel);
+  } else if(weapon==='bo'){
+    for(let t=-4;t<=4;t++) wpx(fistX+ux*t-0.5,fistY+uy*t-0.5,1,1,(Math.round(t)%3===0)?woodDark:wood);
+  }
 }
 
 // Returns joint offsets for each animation at time t
