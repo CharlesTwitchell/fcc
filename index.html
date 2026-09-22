@@ -56,6 +56,8 @@ input[type=text],textarea,select{width:100%;background:#0d0d0d;border:1px solid 
   color:#f0f0f0;font-family:'Rajdhani',sans-serif;font-size:14px;padding:8px 10px;margin-bottom:10px}
 textarea{resize:vertical;min-height:70px}
 input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5c842}
+input[type=color]{width:100%;height:36px;background:#0d0d0d;border:1px solid #444;border-radius:6px;
+  padding:2px;margin-bottom:10px;cursor:pointer}
 .stat-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .stat-label{width:80px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.5px}
 .stat-track{flex:1;height:6px;background:#333;border-radius:3px;overflow:hidden}
@@ -328,9 +330,74 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
             <input type="file" id="c-upload" accept="image/*" multiple onchange="handleUpload(event)">
             <div style="font-size:24px;color:#444;margin-bottom:6px">📷</div>
             <div style="font-size:13px;color:#666">Click to upload photos</div>
-            <div style="font-size:11px;color:#444;margin-top:4px">Influences character appearance</div>
+            <div style="font-size:11px;color:#444;margin-top:4px">Used for the sprite's face + AI flavor text</div>
           </div>
           <div id="upload-preview" class="upload-preview"></div>
+        </div>
+        <div class="creator-panel" style="margin-bottom:12px">
+          <h3>Customize Appearance</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label>Build</label>
+              <select id="c-build">
+                <option value="slim">Slim</option>
+                <option value="medium" selected>Medium</option>
+                <option value="heavy">Heavy</option>
+              </select>
+            </div>
+            <div>
+              <label>Sleeve Style</label>
+              <select id="c-sleeve">
+                <option value="sleeveless">Sleeveless</option>
+                <option value="short">Short Sleeve</option>
+                <option value="long" selected>Long Sleeve</option>
+              </select>
+            </div>
+            <div>
+              <label>Hair Length</label>
+              <select id="c-hairlength">
+                <option value="short" selected>Short</option>
+                <option value="long">Long</option>
+              </select>
+            </div>
+            <div>
+              <label>Skin Tone</label>
+              <input type="color" id="c-skintone" value="#c8a882">
+            </div>
+            <div>
+              <label>Hair Color</label>
+              <input type="color" id="c-haircolor" value="#2a1a0a">
+            </div>
+            <div>
+              <label>Eye Color</label>
+              <input type="color" id="c-eyecolor" value="#3a2a1a">
+            </div>
+            <div>
+              <label>Shirt Color</label>
+              <input type="color" id="c-shirtcolor" value="#e63946">
+            </div>
+            <div>
+              <label>Pants Color</label>
+              <input type="color" id="c-pantscolor" value="#3a3a5a">
+            </div>
+            <div>
+              <label>Shoe Color</label>
+              <input type="color" id="c-shoecolor" value="#3a3a42">
+            </div>
+            <div>
+              <label>Signature Color</label>
+              <input type="color" id="c-sigcolor" value="#e63946">
+            </div>
+          </div>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;margin-top:4px;margin-right:16px">
+            <input type="checkbox" id="c-beard" style="width:auto;margin:0"> Beard
+          </label>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;margin-top:4px;margin-right:16px">
+            <input type="checkbox" id="c-glasses" style="width:auto;margin:0"> Glasses
+          </label>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;margin-top:4px">
+            <input type="checkbox" id="c-cape" checked style="width:auto;margin:0"> Cape
+          </label>
         </div>
         <div class="creator-panel">
           <h3>Personality & Description</h3>
@@ -770,6 +837,20 @@ async function editFighter(i,e){
   document.getElementById('c-appearance').value=f.appearance||'';
   document.getElementById('c-catchphrase').value=f.catchphrase||'';
   document.getElementById('c-finisher').value=f.finisherDesc||'';
+  const sd=f.spriteData||{};
+  document.getElementById('c-build').value=sd.build||'medium';
+  document.getElementById('c-sleeve').value=sd.sleeveStyle||'long';
+  document.getElementById('c-hairlength').value=sd.hairLength||'short';
+  document.getElementById('c-skintone').value=sd.skinTone||'#c8a882';
+  document.getElementById('c-haircolor').value=sd.hairColor||'#2a1a0a';
+  document.getElementById('c-eyecolor').value=sd.eyeColor||'#3a2a1a';
+  document.getElementById('c-shirtcolor').value=sd.shirtColor||f.color||'#e63946';
+  document.getElementById('c-pantscolor').value=sd.pantsColor||'#3a3a5a';
+  document.getElementById('c-shoecolor').value=sd.shoeColor||'#3a3a42';
+  document.getElementById('c-sigcolor').value=f.color||'#e63946';
+  document.getElementById('c-beard').checked=!!sd.beard;
+  document.getElementById('c-glasses').checked=!!sd.glasses;
+  document.getElementById('c-cape').checked=sd.cape!==false;
   const photo=f.photo || (f.hasPhoto ? await loadPhoto(f.id).catch(()=>null) : null);
   if(photo){ uploadedImages=[photo]; renderUploadPreviews(); }
   window._pendingFighter=f;
@@ -785,6 +866,19 @@ function resetCreator(){
   document.getElementById('c-appearance').value='';
   document.getElementById('c-catchphrase').value='';
   document.getElementById('c-finisher').value='';
+  document.getElementById('c-build').value='medium';
+  document.getElementById('c-sleeve').value='long';
+  document.getElementById('c-hairlength').value='short';
+  document.getElementById('c-skintone').value='#c8a882';
+  document.getElementById('c-haircolor').value='#2a1a0a';
+  document.getElementById('c-eyecolor').value='#3a2a1a';
+  document.getElementById('c-shirtcolor').value='#e63946';
+  document.getElementById('c-pantscolor').value='#3a3a5a';
+  document.getElementById('c-shoecolor').value='#3a3a42';
+  document.getElementById('c-sigcolor').value='#e63946';
+  document.getElementById('c-beard').checked=false;
+  document.getElementById('c-glasses').checked=false;
+  document.getElementById('c-cape').checked=true;
   uploadedImages=[]; document.getElementById('upload-preview').innerHTML='';
   document.getElementById('generated-output').innerHTML=`<div class="empty-state" style="padding:30px"><div style="font-size:40px;margin-bottom:8px">🥊</div><h3>Ready to Create</h3><p style="font-size:13px">Fill in the details and hit Generate</p></div>`;
 }
@@ -833,8 +927,25 @@ async function generateFighter(){
   if(!name){ alert('Give your fighter a name!'); return; }
   if(!personality&&!appearance){ alert('Add some personality or appearance details!'); return; }
 
+  // Appearance comes straight from the manual controls — deterministic, not AI-guessed
+  const sigColor=document.getElementById('c-sigcolor').value;
+  const spriteData={
+    skinTone:document.getElementById('c-skintone').value,
+    hairColor:document.getElementById('c-haircolor').value,
+    hairLength:document.getElementById('c-hairlength').value,
+    eyeColor:document.getElementById('c-eyecolor').value,
+    shirtColor:document.getElementById('c-shirtcolor').value,
+    pantsColor:document.getElementById('c-pantscolor').value,
+    shoeColor:document.getElementById('c-shoecolor').value,
+    build:document.getElementById('c-build').value,
+    sleeveStyle:document.getElementById('c-sleeve').value,
+    beard:document.getElementById('c-beard').checked,
+    glasses:document.getElementById('c-glasses').checked,
+    cape:document.getElementById('c-cape').checked,
+  };
+
   const out = document.getElementById('generated-output');
-  out.innerHTML=`<div class="generating-state"><div class="spinner"></div><p style="color:#888;font-size:13px">Step 1/2 — Analyzing appearance<span class="loading-dots"></span></p></div>`;
+  out.innerHTML=`<div class="generating-state"><div class="spinner"></div><p style="color:#888;font-size:13px">Forging fighter profile<span class="loading-dots"></span></p></div>`;
 
   const userPrompt=`Create a fighter profile for a character based on this person:
 Name: ${name}${realname?` (based on: ${realname})`:''}
@@ -872,17 +983,6 @@ Return ONLY a valid JSON object, no markdown, no backticks:
 }`;
 
   try{
-    // Step 1: Extract sprite appearance data from photo (if provided)
-    let spriteData = {};
-    if(uploadedImages.length>0){
-      spriteData = await extractSpriteData(uploadedImages[0], appearance, personality);
-    } else {
-      // Infer from text description
-      spriteData = inferSpriteDataFromText(appearance, personality);
-    }
-
-    out.innerHTML=`<div class="generating-state"><div class="spinner"></div><p style="color:#888;font-size:13px">Step 2/2 — Forging fighter profile<span class="loading-dots"></span></p></div>`;
-
     const msgContent=uploadedImages.length>0
       ?[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:uploadedImages[0].split(',')[1]}},{type:'text',text:userPrompt}]
       :userPrompt;
@@ -915,44 +1015,13 @@ Return ONLY a valid JSON object, no markdown, no backticks:
     f.catchphrase=catchphrase; f.realname=realname; f.finisherDesc=finisherDesc;
     f.photo=uploadedImages[0]||null;
     f.spriteData=spriteData;
+    f.color=sigColor; // manual signature color always wins over the AI's suggestion
     f.id=Date.now(); f.hp=100;
     renderGeneratedFighter(f);
     window._pendingFighter=f;
   }catch(err){
     out.innerHTML=`<div class="error-msg">⚠️ Generation failed.<br><small>${err.message}</small></div>`;
   }
-}
-
-// Fallback: guess sprite colors from text description
-function inferSpriteDataFromText(appearance, personality){
-  const text=(appearance+' '+personality).toLowerCase();
-  const sd={};
-  if(/dark skin|brown skin|black/.test(text)) sd.skinTone='#8a5a3a';
-  else if(/light skin|pale|fair/.test(text)) sd.skinTone='#f5d5b8';
-  else if(/asian|tan/.test(text)) sd.skinTone='#c8a070';
-  else sd.skinTone='#c8a882';
-
-  if(/blonde|blond/.test(text)) sd.hairColor='#e8c840';
-  else if(/red hair|redhead/.test(text)) sd.hairColor='#c83010';
-  else if(/gray hair|grey hair|white hair/.test(text)) sd.hairColor='#aaaaaa';
-  else if(/bald/.test(text)){ sd.hairColor=sd.skinTone||'#c8a882'; sd.hairLength='short'; }
-  else sd.hairColor='#2a1a0a';
-
-  sd.hairLength=/long hair/.test(text)?'long':'short';
-  sd.beard=/beard|goatee|mustache/.test(text);
-  sd.glasses=/glasses|spectacles/.test(text);
-  sd.build=/big|heavy|large|stocky|chubby/.test(text)?'heavy':(/slim|thin|skinny/.test(text)?'slim':'medium');
-
-  if(/red shirt|red top/.test(text)) sd.shirtColor='#e63946';
-  else if(/blue shirt|blue top/.test(text)) sd.shirtColor='#457b9d';
-  else if(/black shirt/.test(text)) sd.shirtColor='#222222';
-  else if(/white shirt/.test(text)) sd.shirtColor='#eeeeee';
-  else if(/green shirt/.test(text)) sd.shirtColor='#2d8a4e';
-  else sd.shirtColor='#e63946';
-
-  sd.pantsColor=/jeans|blue pants/.test(text)?'#3a5a8a':(/black pants/.test(text)?'#2a2a2a':'#3a3a5a');
-  sd.shoeColor=/white shoes|white sneakers/.test(text)?'#dddddd':(/red shoes/.test(text)?'#cc2222':'#111111');
-  return sd;
 }
 
 function renderGeneratedFighter(f){
@@ -985,9 +1054,13 @@ function renderGeneratedFighter(f){
         <button class="btn btn-outline btn-sm" onclick="generateFighter()">Regen</button>
       </div>
     </div>`;
-  // Draw pixel sprite into preview canvas
+  // Draw pixel sprite into preview canvas (same renderer used in live fights).
+  // Paint immediately for instant feedback, then repaint once the photo face is ready.
   const canvas=document.getElementById('preview-sprite');
-  if(canvas) drawSpriteOnCanvas(canvas, f, false);
+  if(canvas){
+    drawAnimFrame(canvas, f, false, 'idle', 1.5);
+    prepareFighterFace(f).then(()=>drawAnimFrame(canvas, f, false, 'idle', 1.5));
+  }
 }
 
 async function saveFighterToRoster(){
@@ -1761,54 +1834,6 @@ function buildSpriteGrid(sd, flip){
   return rows.slice(0,SH);
 }
 
-async function drawSpriteOnCanvas(canvas, fighter, flip){
-  const sd = fighter.spriteData || {};
-  const palette = buildPalette({
-    skinTone: sd.skinTone||'#c8a882',
-    hairColor: sd.hairColor||'#2a1a0a',
-    sigColor: fighter.color||'#e63946',
-    shirtColor: sd.shirtColor||fighter.color||'#e63946',
-    pantsColor: sd.pantsColor||null,
-    shoeColor: sd.shoeColor||'#111111',
-    eyeColor: sd.eyeColor||'#3a2a1a',
-    beltColor: sd.beltColor||null,
-    beard: sd.beard||false,
-    glasses: sd.glasses||false,
-    hairLength: sd.hairLength||'short',
-    build: sd.build||'medium',
-  });
-
-  // Always build the sprite facing right; flip via CSS transform
-  const grid = buildSpriteGrid(sd, false);
-
-  canvas.width = SW * PIXEL_SCALE;
-  canvas.height = SH * PIXEL_SCALE;
-  // Use CSS scaleX to flip P2 so they face left — no pixel-level mirroring needed
-  canvas.style.transform = flip ? 'scaleX(-1)' : 'scaleX(1)';
-
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false;
-
-  for(let row=0; row<SH; row++){
-    for(let col=0; col<SW; col++){
-      const key = grid[row] ? grid[row][col] : 'T';
-      if(!key || key==='T') continue;
-      const color = palette[key] || palette['SK'];
-      if(!color || color.includes('0000')) continue;
-      ctx.fillStyle = color;
-      ctx.fillRect(col*PIXEL_SCALE, row*PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE);
-    }
-  }
-
-  await prepareFighterFace(fighter);
-  const faceImg=faceCache[fighter.id];
-  if(faceImg){
-    ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(faceImg,0,0,11,8,5*PIXEL_SCALE,2*PIXEL_SCALE,13*PIXEL_SCALE,8*PIXEL_SCALE);
-  }
-}
-
 function renderSprite(player, fighter, flip){
   const body = document.getElementById(`body-${player}`);
   if(!body) return;
@@ -1819,61 +1844,10 @@ function renderSprite(player, fighter, flip){
   canvas.style.display = 'block';
   canvas.style.position = 'relative';
   body.appendChild(canvas);
-  drawSpriteOnCanvas(canvas, fighter, flip);
+  drawAnimFrame(canvas, fighter, flip, 'idle', 1.5);
 }
 
 // Extract appearance data from photo using Claude Vision
-async function extractSpriteData(imageBase64, description, personality){
-  const prompt = `Analyze this person's appearance and return ONLY a JSON object with these exact fields — no markdown, no extra text:
-{
-  "skinTone": "hex color code for their skin tone e.g. #c8a882",
-  "hairColor": "hex color e.g. #2a1a0a",
-  "hairLength": "short or long",
-  "eyeColor": "hex color e.g. #3a5a8a",
-  "beard": true or false,
-  "glasses": true or false,
-  "build": "slim, medium, or heavy",
-  "shirtColor": "hex color of their top/shirt",
-  "pantsColor": "hex color of their pants/shorts",
-  "shoeColor": "hex color of their shoes"
-}
-Extra context about this person: ${description||''} ${personality||''}
-If you cannot see a clear shirt/pants/shoe color, infer from the description or use a reasonable default.`;
-
-  const resp = await fetch(FIGHTER_API_URL,{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json'
-    },
-    body: JSON.stringify({
-      model:'claude-sonnet-4-6',
-      max_tokens:400,
-      system:'You extract appearance data from photos and return only JSON. No markdown, no backticks.',
-      messages:[{role:'user', content:[
-        {type:'image', source:{type:'base64', media_type:'image/jpeg', data: imageBase64.split(',')[1]}},
-        {type:'text', text: prompt}
-      ]}]
-    })
-  });
-  const data = await resp.json();
-  if(!resp.ok || !data.content?.[0]) return {};
-  let text = data.content[0].text.trim().replace(/```json|```/g,'').trim();
-  const s=text.indexOf('{'), e=text.lastIndexOf('}');
-  if(s>-1&&e>-1) text=text.slice(s,e+1);
-  try{ return JSON.parse(text); }catch{ return {}; }
-}
-function adjustColor(hex,amt){
-  try{
-    hex=hex.replace('#','');
-    if(hex.length===3) hex=hex.split('').map(c=>c+c).join('');
-    const n=parseInt(hex,16);
-    const r=Math.min(255,Math.max(0,(n>>16)+amt));
-    const g=Math.min(255,Math.max(0,((n>>8)&0xff)+amt));
-    const b=Math.min(255,Math.max(0,(n&0xff)+amt));
-    return `#${((r<<16)|(g<<8)|b).toString(16).padStart(6,'0')}`;
-  }catch{return '#888888'}
-}
-
 function setupControls(fighter,player,isCPU){
   const moves=fighter.moves||{};
   const btns=document.getElementById(`${player}-moves`);
@@ -2015,9 +1989,11 @@ function drawAnimFrame(canvas, fighter, flip, animName, t){
   }
   const sig=fighter.color||'#e63946';
 
-  // CAPE (drawn first, behind the whole body)
-  px(2.5+lean,11+bY,3,20,shade(sig,-0.35));
-  px(18.5+lean,11+bY,3,20,shade(sig,-0.35));
+  // CAPE (drawn first, behind the whole body) — optional
+  if(sd.cape!==false){
+    px(2.5+lean,11+bY,3,20,shade(sig,-0.35));
+    px(18.5+lean,11+bY,3,20,shade(sig,-0.35));
+  }
 
   // SHADOW
   px(2,37,20,2,'rgba(0,0,0,0.35)');
@@ -2052,7 +2028,8 @@ function drawAnimFrame(canvas, fighter, flip, animName, t){
 
   // TORSO — tapered V-shape (broad shoulders -> narrow waist), like a physique
   // rather than a straight box, with pec/ab shading and a chest emblem.
-  const torsoW=[19,18,17,16,15,14,13,12];
+  const buildMod=sd.build==='heavy'?2:(sd.build==='slim'?-2:0);
+  const torsoW=[19,18,17,16,15,14,13,12].map(w=>w+buildMod);
   for(let i=0;i<8;i++){
     const w=torsoW[i];
     const x=11.5+lean-w/2;
@@ -2070,9 +2047,9 @@ function drawAnimFrame(canvas, fighter, flip, animName, t){
   px(10+lean,20+bY,4,1,C.SH3);
 
   // LEFT ARM (punching arm when rArmAngle != 0)
-  drawArm(ctx,P,C, 4+lean, 13+bY, lArmAngle, lArmExtend, false, sig);
+  drawArm(ctx,P,C, 4+lean, 13+bY, lArmAngle, lArmExtend, false, sig, sd.sleeveStyle);
   // RIGHT ARM
-  drawArm(ctx,P,C, 19+lean, 13+bY, rArmAngle, rArmExtend, true, sig);
+  drawArm(ctx,P,C, 19+lean, 13+bY, rArmAngle, rArmExtend, true, sig, sd.sleeveStyle);
 
   // NECK
   px(10+lean+headTilt,9+bY,4,3,C.SK);
@@ -2124,7 +2101,7 @@ function drawAnimFrame(canvas, fighter, flip, animName, t){
   }
 }
 
-function drawArm(ctx,P,C, baseX,baseY, angle, extend, isRight, sigColor){
+function drawArm(ctx,P,C, baseX,baseY, angle, extend, isRight, sigColor, sleeveStyle){
   // angle: 0=hanging down, negative=raised/punching forward, positive=down-kick
   const len=6+extend;
   const rad=angle*(Math.PI/180);
@@ -2132,14 +2109,16 @@ function drawArm(ctx,P,C, baseX,baseY, angle, extend, isRight, sigColor){
   // outward, past the body silhouette, toward the opponent — instead of into the torso.
   const dx=-Math.sin(rad)*len;
   const dy=Math.cos(rad)*len;
+  // sleeveEnd: last upper-arm segment (0..3, shoulder->elbow) still covered by fabric
+  const sleeveEnd = sleeveStyle==='sleeveless' ? -1 : (sleeveStyle==='short' ? 1 : 3);
   // Shoulder cap
-  ctx.fillStyle=C.SH3;
+  ctx.fillStyle = sleeveEnd>=0 ? C.SH3 : C.SK3;
   ctx.fillRect(Math.round((baseX-0.5)*P), Math.round(baseY*P), P*3, P);
   // Upper arm with a bicep bulge at the mid-segment instead of a flat uniform bar
   for(let i=0;i<4;i++){
     const t=i/4;
     const bulge=(i===1||i===2)?1:0;
-    ctx.fillStyle=C.SH2;
+    ctx.fillStyle = i<=sleeveEnd ? C.SH2 : C.SK;
     ctx.fillRect(Math.round((baseX+dx*t*0.5-bulge*0.5)*P), Math.round((baseY+dy*t*0.5)*P), P*(2+bulge), P);
   }
   // Forearm + glove, with a cuff stripe in the fighter's signature color
