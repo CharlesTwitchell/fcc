@@ -120,12 +120,18 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
 .move-btn.super-btn{border-color:#e63946;color:#e63946;font-size:11px}
 .move-btn.super-btn:hover{background:#e63946;color:#fff}
 
-.touch-dpad{display:flex;gap:8px;margin-bottom:8px}
+.touch-dpad{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.touch-dpad-row{display:flex;gap:8px}
 .touch-move-btn{background:#1a1a2e;border:1px solid #457b9d;border-radius:6px;color:#f0f0f0;
   font-size:18px;padding:8px 0;flex:1;cursor:pointer;user-select:none;touch-action:manipulation;
   -webkit-tap-highlight-color:transparent}
 .touch-move-btn:hover{background:#457b9d}
 .touch-move-btn.pressed{background:#457b9d;transform:scale(.96)}
+.touch-jump-btn{background:#1a1a2e;border:1px solid #f5c842;border-radius:6px;color:#f0f0f0;
+  font-size:16px;padding:6px 0;width:100%;cursor:pointer;user-select:none;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent}
+.touch-jump-btn:hover{background:#f5c842;color:#0d0d0d}
+.touch-jump-btn.pressed{background:#f5c842;color:#0d0d0d;transform:scale(.96)}
 
 .battle-log{background:#0d0d0d;border:1px solid #333;border-radius:8px;padding:10px;height:80px;
   overflow-y:auto;font-size:12px;line-height:1.6}
@@ -372,6 +378,7 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
           <div>
             <div style="font-size:11px;color:#f5c842;margin-bottom:4px">⌨ Player 1 (Keyboard)</div>
             <div class="ctrl-row"><span class="ctrl-action">Move</span><span class="ctrl-keys"><span class="key-hint">A</span><span class="key-hint">D</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Jump</span><span class="ctrl-keys"><span class="key-hint">W</span></span></div>
             <div class="ctrl-row"><span class="ctrl-action">Light</span><span class="ctrl-keys"><span class="key-hint">U</span></span></div>
             <div class="ctrl-row"><span class="ctrl-action">Heavy</span><span class="ctrl-keys"><span class="key-hint">I</span></span></div>
             <div class="ctrl-row"><span class="ctrl-action">Special 1</span><span class="ctrl-keys"><span class="key-hint">O</span></span></div>
@@ -382,6 +389,7 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
           <div>
             <div style="font-size:11px;color:#e63946;margin-bottom:4px">⌨ Player 2 (Keyboard)</div>
             <div class="ctrl-row"><span class="ctrl-action">Move</span><span class="ctrl-keys"><span class="key-hint">←</span><span class="key-hint">→</span></span></div>
+            <div class="ctrl-row"><span class="ctrl-action">Jump</span><span class="ctrl-keys"><span class="key-hint">↑</span></span></div>
             <div class="ctrl-row"><span class="ctrl-action">Light</span><span class="ctrl-keys"><span class="key-hint">Num1</span></span></div>
             <div class="ctrl-row"><span class="ctrl-action">Heavy</span><span class="ctrl-keys"><span class="key-hint">Num2</span></span></div>
             <div class="ctrl-row"><span class="ctrl-action">Special 1</span><span class="ctrl-keys"><span class="key-hint">Num4</span></span></div>
@@ -390,7 +398,7 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
             <div class="ctrl-row"><span class="ctrl-action">Block</span><span class="ctrl-keys"><span class="key-hint">Num0</span></span></div>
           </div>
         </div>
-        <div style="margin-top:8px;font-size:11px;color:#555">🎮 USB Gamepad: A=Light · B=Heavy · X=Special1 · Y=Special2 · LB=Block · RB=Super · D-Pad=Move</div>
+        <div style="margin-top:8px;font-size:11px;color:#555">🎮 USB Gamepad: A=Light · B=Heavy · X=Special1 · Y=Special2 · LB=Block · RB=Super · D-Pad=Move/Jump</div>
       </div>
 
       <div class="select-fighters">
@@ -460,16 +468,22 @@ input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#f5
           <div class="controls-panel">
             <h4 id="p1-ctrl-name">Player 1</h4>
             <div class="touch-dpad">
-              <button class="touch-move-btn" data-player="p1" data-dir="-1" aria-label="Move left">◀</button>
-              <button class="touch-move-btn" data-player="p1" data-dir="1" aria-label="Move right">▶</button>
+              <button class="touch-jump-btn" data-player="p1" aria-label="Jump">▲</button>
+              <div class="touch-dpad-row">
+                <button class="touch-move-btn" data-player="p1" data-dir="-1" aria-label="Move left">◀</button>
+                <button class="touch-move-btn" data-player="p1" data-dir="1" aria-label="Move right">▶</button>
+              </div>
             </div>
             <div class="move-btns" id="p1-moves"></div>
           </div>
           <div class="controls-panel">
             <h4 id="p2-ctrl-name">Player 2</h4>
             <div class="touch-dpad" id="p2-dpad">
-              <button class="touch-move-btn" data-player="p2" data-dir="-1" aria-label="Move left">◀</button>
-              <button class="touch-move-btn" data-player="p2" data-dir="1" aria-label="Move right">▶</button>
+              <button class="touch-jump-btn" data-player="p2" aria-label="Jump">▲</button>
+              <div class="touch-dpad-row">
+                <button class="touch-move-btn" data-player="p2" data-dir="-1" aria-label="Move left">◀</button>
+                <button class="touch-move-btn" data-player="p2" data-dir="1" aria-label="Move right">▶</button>
+              </div>
             </div>
             <div class="move-btns" id="p2-moves"></div>
           </div>
@@ -509,7 +523,7 @@ const gpState = {
   1: { buttons: Array(17).fill(false), axes:[0,0,0,0], prevButtons: Array(17).fill(false) }
 };
 // Standard gamepad button map
-const GP_A=0,GP_B=1,GP_X=2,GP_Y=3,GP_LB=4,GP_RB=5,GP_DPAD_L=14,GP_DPAD_R=15;
+const GP_A=0,GP_B=1,GP_X=2,GP_Y=3,GP_LB=4,GP_RB=5,GP_DPAD_UP=12,GP_DPAD_L=14,GP_DPAD_R=15;
 const MOVE_COOLDOWN=350;
 let lastMoveTime={p1:0,p2:0};
 
@@ -561,6 +575,7 @@ function pollGamepads(){
     if(cur[GP_Y]&&!prev[GP_Y]) doMove('p1','special2');
     if(cur[GP_RB]&&!prev[GP_RB]) doMove('p1','super');
     if(cur[GP_LB]&&!prev[GP_LB]) doMove('p1','block');
+    if((cur[GP_DPAD_UP]||pad0.axes[1]<-0.5)&&!(prev[GP_DPAD_UP]||false)) doJump('p1');
     gpState[0].prevButtons=[...cur];
   }
 
@@ -581,6 +596,7 @@ function pollGamepads(){
     if(cur[GP_Y]&&!prev[GP_Y]) doMove('p2','special2');
     if(cur[GP_RB]&&!prev[GP_RB]) doMove('p2','super');
     if(cur[GP_LB]&&!prev[GP_LB]) doMove('p2','block');
+    if((cur[GP_DPAD_UP]||pad1.axes[1]<-0.5)&&!(prev[GP_DPAD_UP]||false)) doJump('p2');
     gpState[1].prevButtons=[...cur];
   }
 
@@ -593,6 +609,7 @@ const keyMap = {
   // P1
   'KeyA': ()=>fightState&&moveSprite('p1',-1),
   'KeyD': ()=>fightState&&moveSprite('p1',1),
+  'KeyW': ()=>doJump('p1'),
   'KeyU': ()=>doMove('p1','light'),
   'KeyI': ()=>doMove('p1','heavy'),
   'KeyO': ()=>doMove('p1','special1'),
@@ -602,6 +619,7 @@ const keyMap = {
   // P2
   'ArrowLeft': ()=>fightState&&moveSprite('p2',-1),
   'ArrowRight': ()=>fightState&&moveSprite('p2',1),
+  'ArrowUp': ()=>doJump('p2'),
   'Numpad1': ()=>doMove('p2','light'),
   'Numpad2': ()=>doMove('p2','heavy'),
   'Numpad4': ()=>doMove('p2','special1'),
@@ -652,6 +670,19 @@ function bindTouchDpad(){
     btn.addEventListener('pointerup',stop);
     btn.addEventListener('pointerleave',stop);
     btn.addEventListener('pointercancel',stop);
+  });
+  document.querySelectorAll('.touch-jump-btn').forEach(btn=>{
+    const player=btn.dataset.player;
+    btn.addEventListener('pointerdown',(e)=>{
+      e.preventDefault();
+      if(player==='p2'&&fightState&&fightState.isCPU) return;
+      btn.classList.add('pressed');
+      doJump(player);
+    });
+    const release=()=>btn.classList.remove('pressed');
+    btn.addEventListener('pointerup',release);
+    btn.addEventListener('pointerleave',release);
+    btn.addEventListener('pointercancel',release);
   });
 }
 bindTouchDpad();
@@ -2219,6 +2250,16 @@ function getAnimOffsets(animName, t, sigColor){
       return { bodyY:8, lean:-6, lArmAngle:60, rArmAngle:40, lLegKick:-3, headTilt:5 };
     }
 
+    case 'jump': { // Vertical hop — legs tuck up and arms flourish at the peak
+      const p=Math.min(1,t/0.55);
+      const height=Math.sin(p*Math.PI);
+      return {
+        bodyY: -height*9,
+        lLegKick: height*4, rLegKick: height*4,
+        lArmAngle: -height*15, rArmAngle: height*15,
+      };
+    }
+
     default:
       return {};
   }
@@ -2260,6 +2301,12 @@ function animateHit(player){
 }
 function animateBlock(player){
   playAnim(player,'block',500);
+}
+function doJump(player){
+  if(!fightState||!fightState.active) return;
+  if(player==='p2'&&fightState.isCPU) return;
+  if(animState[player].anim==='jump') return; // already mid-jump
+  playAnim(player,'jump',550);
 }
 function showFlash(){
   const f=document.getElementById('attack-flash');
