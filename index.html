@@ -592,6 +592,17 @@ let fightState=null, fightTimer=null;
 let uploadedImages=[], editingIdx=-1;
 let levels = [];
 try{ levels = JSON.parse(localStorage.getItem('fcc_levels')||'[]'); }catch(e){}
+// Built-in standard stages, always available alongside Classic Arena and
+// whatever the user creates. Fixed negative ids keep them out of the way of
+// Date.now()-based custom level ids and give mulberry32 a stable seed.
+const BUILTIN_STAGES = [
+  { id:-101, name:'Boxing Ring', style:'ring', skyTop:'#1a1420', skyBottom:'#2e2030',
+    silhouette:'#241c2e', ground:'#8a1f1f', groundShadow:'#3a0d0d', accent:'#f5c842' },
+  { id:-102, name:'The Bar', style:'bar', skyTop:'#2a1810', skyBottom:'#4a2e18',
+    silhouette:'#3a2416', ground:'#5c3a1e', groundShadow:'#2a1a0e', accent:'#ff8c3c' },
+  { id:-103, name:'Castle', style:'castle', skyTop:'#0e1230', skyBottom:'#2a2350',
+    silhouette:'#231c40', ground:'#4a4658', groundShadow:'#1c1a28', accent:'#8fd6ff' },
+];
 let uploadedLevelImages=[];
 let uploadedLevelMusic=null; // File object, held until the level is saved
 
@@ -1115,6 +1126,26 @@ function renderLevels(){
   classicCard.innerHTML=`<div class="fighter-avatar" style="background:linear-gradient(180deg,#1a0a2e 60%,#2d1b4e 60%,#3d2560 100%);border-radius:8px;width:100%;height:80px"></div><div class="fighter-name" style="margin-top:8px">Classic Arena</div><div class="fighter-style">Default stage</div>`;
   grid.appendChild(classicCard);
 
+  BUILTIN_STAGES.forEach((lv,i)=>{
+    const card=document.createElement('div');
+    card.className='fighter-card';
+    card.style.cursor='default';
+    card.innerHTML=`
+      <div id="builtin-avatar-${i}" style="overflow:hidden;border-radius:8px;width:100%;height:80px;background:#0d0d1a"></div>
+      <div class="fighter-name" style="margin-top:8px">${lv.name}</div>
+      <div class="fighter-style">Standard stage</div>`;
+    grid.appendChild(card);
+    requestAnimationFrame(()=>{
+      const wrap=document.getElementById(`builtin-avatar-${i}`);
+      if(!wrap) return;
+      const c=document.createElement('canvas');
+      c.width=280; c.height=160; c.style.width='100%'; c.style.height='100%';
+      c.style.imageRendering='pixelated';
+      wrap.appendChild(c);
+      paintStagePreview(c, lv);
+    });
+  });
+
   levels.forEach((lv,i)=>{
     const card=document.createElement('div');
     card.className='fighter-card';
@@ -1491,6 +1522,64 @@ async function paintStagePreview(canvas, level){
       const bh=bandH*0.3+rnd()*bandH*0.3;
       ctx.fillRect(i*bw+1, bandH-bh, bw-2, bh);
     }
+  } else if(style==='ring'){
+    // Crowd silhouette in the far background
+    const n=12;
+    for(let i=0;i<n;i++){
+      const bw=w/n;
+      const bh=bandH*0.15+rnd()*bandH*0.15;
+      ctx.fillRect(i*bw+1, bandH-bh, bw-2, bh);
+    }
+    // Ring ropes: three horizontal cords strung between corner posts
+    const postW=w*0.02, postTop=bandH*0.28, postH=bandH*0.62;
+    const posts=[w*0.06, w*0.94-postW];
+    ctx.fillStyle='#c8c8c8';
+    posts.forEach(px=>ctx.fillRect(px, postTop, postW, postH));
+    const ropeYs=[postTop+postH*0.18, postTop+postH*0.5, postTop+postH*0.82];
+    ctx.strokeStyle='#e63946'; ctx.lineWidth=Math.max(2,h*0.012);
+    ropeYs.forEach(ry=>{
+      ctx.beginPath(); ctx.moveTo(posts[0]+postW/2, ry); ctx.lineTo(posts[1]+postW/2, ry); ctx.stroke();
+    });
+    // Canvas mat apron
+    ctx.fillStyle=level.silhouette||'#241c2e';
+    ctx.fillRect(0, bandH-bandH*0.06, w, bandH*0.06);
+  } else if(style==='bar'){
+    // Back wall shelf with bottle silhouettes
+    const shelfY=bandH*0.42;
+    ctx.fillRect(0, shelfY, w, bandH*0.03);
+    const n=14+Math.floor(rnd()*6);
+    for(let i=0;i<n;i++){
+      const bx=(i+0.5)*(w/n)+(rnd()-0.5)*(w/n)*0.4;
+      const bh=bandH*0.12+rnd()*bandH*0.16;
+      const bw=w*0.012+rnd()*w*0.008;
+      ctx.fillRect(bx-bw/2, shelfY-bh, bw, bh);
+      ctx.fillRect(bx-bw*0.6, shelfY-bh-bh*0.18, bw*1.2, bh*0.18);
+    }
+    // Long wooden counter in front
+    ctx.fillStyle=level.groundShadow||'#2a1a0e';
+    ctx.fillRect(0, bandH*0.78, w, bandH*0.22);
+    ctx.fillStyle=level.silhouette||'#3a2416';
+    ctx.fillRect(0, bandH*0.78, w, bandH*0.04);
+  } else if(style==='castle'){
+    // Stone towers with crenellation notches along the top
+    const n=5+Math.floor(rnd()*2);
+    for(let i=0;i<=n;i++){
+      const tw=w/n;
+      const tx=i*tw - tw*0.15;
+      const th=bandH*0.45+rnd()*bandH*0.45;
+      ctx.fillRect(tx, bandH-th, tw*0.7, th);
+      const notchW=tw*0.7/5;
+      for(let j=0;j<5;j+=2) ctx.fillRect(tx+j*notchW, bandH-th-notchW*0.8, notchW, notchW*0.8);
+    }
+    // Arched windows glowing faintly
+    ctx.fillStyle=level.accent||'#8fd6ff';
+    ctx.globalAlpha=0.5;
+    for(let i=0;i<n;i++){
+      const wx=(i+0.5)*(w/n);
+      ctx.fillRect(wx-w*0.006, bandH*0.55+rnd()*bandH*0.2, w*0.012, bandH*0.1);
+    }
+    ctx.globalAlpha=1;
+    ctx.fillStyle=level.silhouette||'#231c40';
   } else { // skyline
     let x=0;
     while(x<w){
@@ -1572,8 +1661,9 @@ function updateMuteBtnIcon(){
 function renderFightSetup(){
   const stageSel=document.getElementById('stage-select');
   if(stageSel){
-    stageSel.innerHTML = `<option value="-1">Classic Arena</option>` +
-      levels.map((lv,i)=>`<option value="${i}">${lv.name}</option>`).join('');
+    stageSel.innerHTML = `<option value="classic">Classic Arena</option>` +
+      BUILTIN_STAGES.map((lv,i)=>`<option value="builtin:${i}">${lv.name}</option>`).join('') +
+      levels.map((lv,i)=>`<option value="custom:${i}">${lv.name}</option>`).join('');
   }
   ['p1','p2'].forEach(p=>{
     const el=document.getElementById(`${p}-options`);
@@ -1619,8 +1709,10 @@ function startFight(){
   f1.hp=100; f2.hp=100; f1.power_meter=0; f2.power_meter=0;
   const stageEl = document.getElementById('fight-stage');
   const stageW2 = stageEl.offsetWidth || 700;
-  const stageIdx=parseInt(document.getElementById('stage-select')?.value ?? '-1', 10);
-  const chosenLevel=stageIdx>=0 ? levels[stageIdx] : null;
+  const stageVal=document.getElementById('stage-select')?.value ?? 'classic';
+  let chosenLevel=null;
+  if(stageVal.startsWith('builtin:')) chosenLevel=BUILTIN_STAGES[parseInt(stageVal.slice(8),10)]||null;
+  else if(stageVal.startsWith('custom:')) chosenLevel=levels[parseInt(stageVal.slice(7),10)]||null;
   applyStage(chosenLevel);
   playStageMusic(chosenLevel);
   fightState={p1:f1,p2:f2,isCPU,round:1,timeLeft:60,active:true,p1Pos:60,p2Pos:stageW2-140};
