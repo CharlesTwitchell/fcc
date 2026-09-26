@@ -236,6 +236,7 @@ input[type=color]{width:100%;height:36px;background:#0d0d0d;border:1px solid #44
     <button class="nav-btn" onclick="showScreen('creator',this)">+ Add Fighter</button>
     <button class="nav-btn" onclick="showScreen('levels',this)">🏟️ Stages</button>
     <button class="nav-btn" onclick="showScreen('fight',this)">⚔️ Fight!</button>
+    <button class="nav-btn" onclick="showScreen('save',this)">💾 Save Data</button>
   </div>
 
   <!-- ROSTER -->
@@ -575,6 +576,34 @@ input[type=color]{width:100%;height:36px;background:#0d0d0d;border:1px solid #44
     </div>
 
     <div id="fight-result" style="display:none"></div>
+  </div>
+
+  <!-- SAVE DATA (export/import — a "memory card" between devices/browsers) -->
+  <div id="screen-save" class="screen">
+    <div class="creator-grid">
+      <div class="creator-panel">
+        <h3>📤 Export Save Data</h3>
+        <p style="font-size:13px;color:#aaa;margin-bottom:10px">Everything on this device — your roster, custom stages, photos and music — packs into a single file you can carry to another device or browser (like a memory card).</p>
+        <button class="btn btn-gold" style="width:100%" onclick="exportSaveData()">⬇ Download Save File</button>
+        <div id="save-export-status" style="font-size:12px;color:#39d353;margin-top:8px;min-height:16px"></div>
+      </div>
+      <div class="creator-panel">
+        <h3>📥 Import Save Data</h3>
+        <p style="font-size:13px;color:#aaa;margin-bottom:10px">Load a save file exported from another device. Choose how to bring it in:</p>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#ccc;margin-bottom:6px;cursor:pointer">
+          <input type="radio" name="import-mode" value="merge" checked> Merge — add alongside what's already here
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#ccc;margin-bottom:12px;cursor:pointer">
+          <input type="radio" name="import-mode" value="replace"> Replace — wipe this device's data first
+        </label>
+        <div class="upload-zone" onclick="document.getElementById('save-import-file').click()">
+          <input type="file" id="save-import-file" accept="application/json" onchange="handleImportFile(event)">
+          <div style="font-size:24px;color:#444;margin-bottom:6px">💾</div>
+          <div style="font-size:13px;color:#666">Click to choose a save file</div>
+        </div>
+        <div id="save-import-status" style="font-size:12px;color:#39d353;margin-top:8px;min-height:16px"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1242,6 +1271,124 @@ const deleteTrack=(id)=>dbDelete('tracks',id);
 const savePhoto=(id,dataUrl)=>dbPut('photos',id,dataUrl);
 const loadPhoto=(id)=>dbGet('photos',id);
 const deletePhoto=(id)=>dbDelete('photos',id);
+
+// ===== SAVE DATA EXPORT/IMPORT ("memory card" between devices/browsers) =====
+// Everything lives in this browser's localStorage + IndexedDB, so nothing
+// carries over to another device on its own. Export bundles it all (fighter
+// list, stage list, plus every referenced photo/music blob) into one JSON
+// file the user can move manually; Import reads that file back in.
+function blobToDataURL(blob){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result);
+    r.onerror=()=>reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+function dataURLToBlob(dataUrl){
+  const [meta,b64]=dataUrl.split(',');
+  const mime=(meta.match(/:(.*?);/)||[])[1]||'application/octet-stream';
+  const bin=atob(b64);
+  const arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return new Blob([arr],{type:mime});
+}
+
+async function exportSaveData(){
+  const statusEl=document.getElementById('save-export-status');
+  if(statusEl){ statusEl.style.color='#aaa'; statusEl.textContent='Gathering data…'; }
+  try{
+    const data={ version:1, exportedAt:new Date().toISOString(),
+      fighters:JSON.parse(JSON.stringify(fighters)),
+      levels:JSON.parse(JSON.stringify(levels)),
+      photos:{}, tracks:{} };
+    for(const f of data.fighters){
+      if(f.hasPhoto){ const p=await loadPhoto(f.id).catch(()=>null); if(p) data.photos[f.id]=p; }
+    }
+    for(const lv of data.levels){
+      if(lv.hasPhoto){ const p=await loadPhoto(lv.id).catch(()=>null); if(p) data.photos[lv.id]=p; }
+      if(lv.hasMusic){
+        const blob=await loadTrack(lv.id).catch(()=>null);
+        if(blob) data.tracks[lv.id]=await blobToDataURL(blob);
+      }
+    }
+    const json=JSON.stringify(data);
+    const blob=new Blob([json],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=`fcc-save-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    if(statusEl){ statusEl.style.color='#39d353'; statusEl.textContent=`Exported ${data.fighters.length} fighter(s) and ${data.levels.length} custom stage(s).`; }
+  }catch(e){
+    if(statusEl){ statusEl.style.color='#e63946'; statusEl.textContent='Export failed: '+e.message; }
+  }
+}
+
+function handleImportFile(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const mode=document.querySelector('input[name="import-mode"]:checked')?.value||'merge';
+  const statusEl=document.getElementById('save-import-status');
+  const reader=new FileReader();
+  reader.onload=async ()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      if(!data||!Array.isArray(data.fighters)||!Array.isArray(data.levels)) throw new Error('That file doesn\'t look like a Friend Cult Combat save.');
+
+      const confirmMsg = mode==='replace'
+        ? `Replace ALL fighters/stages on this device with the ${data.fighters.length} fighter(s) and ${data.levels.length} stage(s) from this file? This cannot be undone.`
+        : `Add the ${data.fighters.length} fighter(s) and ${data.levels.length} stage(s) from this file to what's already on this device?`;
+      if(!confirm(confirmMsg)){ e.target.value=''; return; }
+
+      // On merge, remap ids so imported entries never collide with what's
+      // already here; on replace there's nothing left to collide with.
+      const idRemap={};
+      const newIdFor=(oldId)=>{
+        if(mode==='replace') return oldId;
+        if(!(oldId in idRemap)) idRemap[oldId]=Date.now()+Math.floor(Math.random()*1e6);
+        return idRemap[oldId];
+      };
+
+      const importedFighters=data.fighters.map(f=>{
+        const nf=JSON.parse(JSON.stringify(f));
+        nf._oldId=nf.id; nf.id=newIdFor(nf.id);
+        return nf;
+      });
+      const importedLevels=data.levels.map(lv=>{
+        const nlv=JSON.parse(JSON.stringify(lv));
+        nlv._oldId=nlv.id; nlv.id=newIdFor(nlv.id);
+        return nlv;
+      });
+
+      for(const f of importedFighters){
+        if(f.hasPhoto && data.photos && data.photos[f._oldId]!==undefined){
+          try{ await savePhoto(f.id, data.photos[f._oldId]); }catch(e){ f.hasPhoto=false; }
+        }
+        delete f._oldId;
+      }
+      for(const lv of importedLevels){
+        if(lv.hasPhoto && data.photos && data.photos[lv._oldId]!==undefined){
+          try{ await savePhoto(lv.id, data.photos[lv._oldId]); }catch(e){ lv.hasPhoto=false; }
+        }
+        if(lv.hasMusic && data.tracks && data.tracks[lv._oldId]!==undefined){
+          try{ await saveTrack(lv.id, dataURLToBlob(data.tracks[lv._oldId])); }catch(e){ lv.hasMusic=false; }
+        }
+        delete lv._oldId;
+      }
+
+      if(mode==='replace'){ fighters=importedFighters; levels=importedLevels; }
+      else { fighters=fighters.concat(importedFighters); levels=levels.concat(importedLevels); }
+      saveFighters(); saveLevels();
+      if(statusEl){ statusEl.style.color='#39d353'; statusEl.textContent=`Imported ${importedFighters.length} fighter(s) and ${importedLevels.length} stage(s).`; }
+      renderRoster();
+    }catch(err){
+      if(statusEl){ statusEl.style.color='#e63946'; statusEl.textContent='Import failed: '+err.message; }
+    }
+    e.target.value='';
+  };
+  reader.readAsText(file);
+}
 
 function handleLevelMusicUpload(e){
   const file=e.target.files[0];
